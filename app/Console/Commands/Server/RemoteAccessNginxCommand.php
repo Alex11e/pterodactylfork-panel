@@ -2,8 +2,8 @@
 
 namespace Pterodactyl\Console\Commands\Server;
 
-use Illuminate\Console\Command;
 use Pterodactyl\Models\Node;
+use Illuminate\Console\Command;
 use Pterodactyl\Services\Nodes\NginxGateway;
 
 class RemoteAccessNginxCommand extends Command

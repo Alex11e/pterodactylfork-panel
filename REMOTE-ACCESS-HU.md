@@ -23,6 +23,9 @@ PufferPanel-kódot nem másoltunk át; a Wings protokollja változatlan.
 - Proxyzott konzol, parancsok, élő státuszok és WebSocket-tokenfrissítés.
 - Proxyzott fájlfeltöltés, fájlletöltés és helyi mentések letöltése.
 - Diagnosztikai parancs, regressziós tesztek és külön gateway CI workflow.
+- Docker Compose és saját telepítő: lásd `DOCKER-HU.md`.
+- Magyar fő navigáció és konzolkényelmi funkciók.
+- Cloudflare aldomain-kezelő: lásd `SUBDOMAINS-HU.md`.
 
 Az S3-mentések a meglévő, aláírt S3-URL-t használják. SFTP és a játék saját
 TCP/UDP-portjai külön kapcsolatot igényelnek, ezek nem WebSocket/HTTP-szolgáltatások.

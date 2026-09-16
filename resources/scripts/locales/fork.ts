@@ -1,4 +1,28 @@
 export const hu: Record<string, string> = {
+    'Subdomain manager': 'Aldomain-kezelő',
+    'Loading...': 'Betöltés…',
+    'Ask your administrator to enable Cloudflare DNS in the panel configuration.':
+        'A Cloudflare DNS bekapcsolását kérd a panel adminisztrátorától.',
+    'DNS saved': 'DNS-rekord mentve',
+    'Pending — use Sync or Delete to recover': 'Függőben – használd a Frissítés vagy Törlés gombot az újrapróbáláshoz',
+    'After an allocation change, use Sync to update the IP and port.':
+        'Az elsődleges IP vagy port megváltoztatása után kattints a Frissítés gombra.',
+    'Copy address': 'Cím másolása',
+    Sync: 'Frissítés',
+    'Delete subdomain': 'Aldomain törlése',
+    'Delete this DNS address? The game server will keep running.':
+        'Törlöd ezt a DNS-címet? A játékszerver továbbra is működni fog.',
+    'Confirm deletion': 'Törlés megerősítése',
+    'Server address': 'Szerver címe',
+    'Create subdomain': 'Aldomain létrehozása',
+    'Only the server owner or an administrator can manage subdomains.':
+        'Aldomaint csak a szerver tulajdonosa vagy adminisztrátor kezelhet.',
+    'DNS does not open firewall ports. Connect using the displayed address and port.':
+        'A DNS nem nyit tűzfalportokat. A kiírt címmel és porttal csatlakozz a szerverhez.',
+    'DNS change saved. Propagation may take a few minutes.':
+        'DNS-módosítás mentve. Az érvényesülése néhány percig tarthat.',
+    'Address copied.': 'Cím másolva.',
+    'Copy failed. Select and copy the address manually.': 'Nem sikerült másolni. Jelöld ki és másold a címet kézzel.',
     Dashboard: 'Áttekintés',
     Admin: 'Adminisztráció',
     'Account Settings': 'Fiókbeállítások',

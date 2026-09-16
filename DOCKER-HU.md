@@ -9,11 +9,11 @@ a script az `install.sh` fájl. GitHubra feltöltött branch esetén:
 bash <(curl -fsSL --proto '=https' https://raw.githubusercontent.com/Alex11e/pterodactylfork-panel/feature/puffer-docker-hu/install.sh)
 ```
 
-Ha a branch még nincs feltöltve, klónozd a forrást, futtasd a `bash install.sh`
-parancsot, vagy használd a csomagban lévő scriptet. A telepítő nem töröl meglévő
+Amíg a branch nincs feltöltve, az egyparancsos távoli telepítés még nem használható:
+a script is ebből a branchből tölti le a forrást. A helyi ZIP-forráshoz kövesd
+az alábbi kézi Docker indítást. A telepítő nem töröl meglévő
 Docker-csomagot, adatbázist, kötetet vagy célkönyvtárat. Root Debian/Ubuntu
-rendszeren fut; az operációs rendszer és Docker telepítése előtt kérdezd meg a
-felhasználót. A script a Docker hivatalos apt-tárolóját használja, és nem futtat
+rendszeren fut. A script a Docker hivatalos apt-tárolóját használja, és nem futtat
 ismeretlen, távoli shell-kódot.
 
 ## Menüpontok
@@ -35,7 +35,8 @@ kéri, így nem kerül shell historyba.
 ```bash
 cp deploy/env.example deploy/.env
 # Töltsd ki az APP_URL-t, APP_KEY-t, DB_PASSWORD-öket és HASHIDS_SALT-ot.
-docker compose --env-file deploy/.env -f compose.yaml up -d --build
+docker compose --env-file deploy/.env -f compose.yaml build panel
+docker compose --env-file deploy/.env -f compose.yaml up -d --wait database redis
 docker compose --env-file deploy/.env -f compose.yaml run --rm panel php artisan migrate --seed --force
 docker compose --env-file deploy/.env -f compose.yaml up -d --wait
 docker compose --env-file deploy/.env -f compose.yaml exec panel php artisan p:user:make --admin=1
@@ -60,7 +61,8 @@ elmentetted a host `/etc/pterodactyl/config.yml` fájljába. A Wings konténer h
 network módban fut, megkapja a Docker socketet és a `/var/lib/pterodactyl`,
 `/var/log/pterodactyl`, `/tmp/pterodactyl` könyvtárakat. Ez erős jogosultság: a
 socket birtokosa lényegében host-szintű Docker-hozzáférést kap, ezért csak
-megbízható szerveren használd és a host tűzfalán korlátozd a 8080/2022 portokat.
+megbízható szerveren használd és a host tűzfalán korlátozd a beállított Wings API-
+és SFTP-portokat (a telepítő példájában 8081 és 2022).
 
 Ebben a telepítési mintában a panel konténer nem ugyanazt a host-networket használja.
 A node FQDN-jét olyan címre állítsd, amit a panel konténer elér (például a host

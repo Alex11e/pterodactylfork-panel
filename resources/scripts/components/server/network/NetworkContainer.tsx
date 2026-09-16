@@ -12,6 +12,7 @@ import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import getServerAllocations from '@/api/swr/getServerAllocations';
 import isEqual from 'react-fast-compare';
 import { useDeepCompareEffect } from '@/plugins/useDeepCompareEffect';
+import SubdomainManager from '@/components/server/network/SubdomainManager';
 
 const NetworkContainer = () => {
     const [loading, setLoading] = useState(false);
@@ -77,6 +78,7 @@ const NetworkContainer = () => {
                     )}
                 </>
             )}
+            <SubdomainManager key={uuid} />
         </ServerContentBlock>
     );
 };

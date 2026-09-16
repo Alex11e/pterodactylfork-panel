@@ -2,8 +2,6 @@
 
 namespace Pterodactyl\Services\Nodes;
 
-use InvalidArgumentException;
-
 /** Browser-facing Wings origin; deliberately separate from the daemon API/JWT audience. */
 class PublicEndpoint
 {
@@ -15,7 +13,7 @@ class PublicEndpoint
 
         $url = $endpoints[$nodeId];
         if (!is_string($url) || preg_match('/[\s\\\\]/', $url)) {
-            throw new InvalidArgumentException("Invalid public Wings URL for node {$nodeId}.");
+            throw new \InvalidArgumentException("Invalid public Wings URL for node {$nodeId}.");
         }
 
         $parts = parse_url($url);
@@ -24,11 +22,11 @@ class PublicEndpoint
             || isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])
             || !in_array($parts['path'] ?? '', ['', '/'], true)
             || (isset($parts['port']) && $parts['port'] < 1)) {
-            throw new InvalidArgumentException("Public Wings URL for node {$nodeId} must be an HTTP(S) origin without credentials, path, query or fragment.");
+            throw new \InvalidArgumentException("Public Wings URL for node {$nodeId} must be an HTTP(S) origin without credentials, path, query or fragment.");
         }
 
         if ($securePanel && $parts['scheme'] !== 'https') {
-            throw new InvalidArgumentException("Node {$nodeId} requires a public HTTPS URL because the panel uses HTTPS.");
+            throw new \InvalidArgumentException("Node {$nodeId} requires a public HTTPS URL because the panel uses HTTPS.");
         }
 
         return rtrim($url, '/');

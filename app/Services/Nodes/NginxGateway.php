@@ -2,15 +2,13 @@
 
 namespace Pterodactyl\Services\Nodes;
 
-use InvalidArgumentException;
-
 /** Fixed upstream gateway for the panel's nginx server; no user-selected targets. */
 class NginxGateway
 {
     public static function browserAddress(int $id, string $panelUrl): string
     {
         if ($id < 1) {
-            throw new InvalidArgumentException('Node IDs must be positive integers.');
+            throw new \InvalidArgumentException('Node IDs must be positive integers.');
         }
 
         return PublicEndpoint::resolve(0, '', [0 => $panelUrl], false) . '/_wings/' . $id;
@@ -25,13 +23,13 @@ class NginxGateway
         ksort($nodes);
         foreach ($nodes as $id => $url) {
             if (!is_int($id) || $id < 1) {
-                throw new InvalidArgumentException('Node IDs must be positive integers.');
+                throw new \InvalidArgumentException('Node IDs must be positive integers.');
             }
             $url = PublicEndpoint::resolve($id, '', [$id => $url], false);
             // Only literal DNS names/IPs: nginx variables or config syntax must never be emitted.
             $host = parse_url($url, PHP_URL_HOST);
             if (!preg_match('/\A[a-zA-Z0-9.\-:\[\]]+\z/', $host)) {
-                throw new InvalidArgumentException("Unsafe upstream hostname for node {$id}.");
+                throw new \InvalidArgumentException("Unsafe upstream hostname for node {$id}.");
             }
             $tls = '';
             if (str_starts_with($url, 'https://')) {

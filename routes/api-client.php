@@ -112,6 +112,10 @@ Route::group([
     });
 
     Route::group(['prefix' => '/network'], function () {
+        Route::get('/subdomain', [Client\Servers\SubdomainController::class, 'index']);
+        Route::post('/subdomain', [Client\Servers\SubdomainController::class, 'save'])->middleware('throttle:10,1');
+        Route::put('/subdomain', [Client\Servers\SubdomainController::class, 'save'])->middleware('throttle:10,1');
+        Route::delete('/subdomain', [Client\Servers\SubdomainController::class, 'delete'])->middleware('throttle:10,1');
         Route::get('/allocations', [Client\Servers\NetworkAllocationController::class, 'index']);
         Route::middleware([ResourceLimit::Allocation->middleware()])
             ->post('/allocations', [Client\Servers\NetworkAllocationController::class, 'store']);

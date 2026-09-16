@@ -16,6 +16,8 @@ jobs:
           node-version: '24'
       - run: sudo apt-get update && sudo apt-get install -y nginx
       - run: php tests/remote-access.php && php tests/gateway-config.php
+      - run: php tests/subdomain-rules.php
+      - run: php tests/subdomain-provider.php
       - run: |
           mkdir -p /tmp/pterodactyl-gateway-check
           cd /tmp/pterodactyl-gateway-check

@@ -2,9 +2,9 @@
 
 namespace Pterodactyl\Console\Commands\Server;
 
+use Pterodactyl\Models\Node;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Pterodactyl\Models\Node;
 
 class RemoteAccessCommand extends Command
 {
@@ -23,7 +23,7 @@ class RemoteAccessCommand extends Command
 
         try {
             $public = $node->getPublicConnectionAddress();
-        } catch (\InvalidArgumentException | \TypeError $exception) {
+        } catch (\InvalidArgumentException|\TypeError $exception) {
             $this->error($exception->getMessage());
 
             return self::FAILURE;
