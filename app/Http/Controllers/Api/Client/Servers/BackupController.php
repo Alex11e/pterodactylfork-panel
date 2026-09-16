@@ -174,7 +174,7 @@ class BackupController extends ClientApiController
             throw new BadRequestHttpException('The backup requested references an unknown disk driver type and cannot be downloaded.');
         }
 
-        $url = $this->downloadLinkService->handle($backup, $request->user());
+        $url = $this->downloadLinkService->handle($backup, $request->user(), true);
 
         Activity::event('server:backup.download')->subject($backup)->property('name', $backup->name)->log();
 

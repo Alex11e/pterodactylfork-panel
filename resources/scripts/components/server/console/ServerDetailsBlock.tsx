@@ -1,3 +1,4 @@
+import usePanelText from '@/plugins/usePanelText';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
     faClock,
@@ -15,7 +16,6 @@ import UptimeDuration from '@/components/server/UptimeDuration';
 import StatBlock from '@/components/server/console/StatBlock';
 import useWebsocketEvent from '@/plugins/useWebsocketEvent';
 import classNames from 'classnames';
-import { capitalize } from '@/lib/strings';
 
 type Stats = Record<'memory' | 'cpu' | 'disk' | 'uptime' | 'rx' | 'tx', number>;
 
@@ -40,6 +40,7 @@ const Limit = ({ limit, children }: { limit: string | null; children: React.Reac
 );
 
 const ServerDetailsBlock = ({ className }: { className?: string }) => {
+    const text = usePanelText();
     const [stats, setStats] = useState<Stats>({ memory: 0, cpu: 0, disk: 0, uptime: 0, tx: 0, rx: 0 });
 
     const status = ServerContext.useStoreState((state) => state.status.value);
@@ -90,48 +91,60 @@ const ServerDetailsBlock = ({ className }: { className?: string }) => {
 
     return (
         <div className={classNames('grid grid-cols-6 gap-2 md:gap-4', className)}>
-            <StatBlock icon={faWifi} title={'Address'} copyOnClick={allocation}>
+            <StatBlock icon={faWifi} title={text('Address')} copyOnClick={allocation}>
                 {allocation}
             </StatBlock>
             <StatBlock
                 icon={faClock}
-                title={'Uptime'}
+                title={text('Uptime')}
                 color={getBackgroundColor(status === 'running' ? 0 : status !== 'offline' ? 9 : 10, 10)}
             >
                 {status === null ? (
-                    'Offline'
+                    text('Offline')
                 ) : stats.uptime > 0 ? (
                     <UptimeDuration uptime={stats.uptime / 1000} />
                 ) : (
-                    capitalize(status)
+                    text(status)
                 )}
             </StatBlock>
-            <StatBlock icon={faMicrochip} title={'CPU Load'} color={getBackgroundColor(stats.cpu, limits.cpu)}>
+            <StatBlock icon={faMicrochip} title={text('CPU Load')} color={getBackgroundColor(stats.cpu, limits.cpu)}>
                 {status === 'offline' ? (
-                    <span className={'text-gray-400'}>Offline</span>
+                    <span className={'text-gray-400'}>{text('Offline')}</span>
                 ) : (
                     <Limit limit={textLimits.cpu}>{stats.cpu.toFixed(2)}%</Limit>
                 )}
             </StatBlock>
             <StatBlock
                 icon={faMemory}
-                title={'Memory'}
+                title={text('Memory')}
                 color={getBackgroundColor(stats.memory / 1024, limits.memory * 1024)}
             >
                 {status === 'offline' ? (
-                    <span className={'text-gray-400'}>Offline</span>
+                    <span className={'text-gray-400'}>{text('Offline')}</span>
                 ) : (
                     <Limit limit={textLimits.memory}>{bytesToString(stats.memory)}</Limit>
                 )}
             </StatBlock>
-            <StatBlock icon={faHdd} title={'Disk'} color={getBackgroundColor(stats.disk / 1024, limits.disk * 1024)}>
+            <StatBlock
+                icon={faHdd}
+                title={text('Disk')}
+                color={getBackgroundColor(stats.disk / 1024, limits.disk * 1024)}
+            >
                 <Limit limit={textLimits.disk}>{bytesToString(stats.disk)}</Limit>
             </StatBlock>
-            <StatBlock icon={faCloudDownloadAlt} title={'Network (Inbound)'}>
-                {status === 'offline' ? <span className={'text-gray-400'}>Offline</span> : bytesToString(stats.rx)}
+            <StatBlock icon={faCloudDownloadAlt} title={text('Network (Inbound)')}>
+                {status === 'offline' ? (
+                    <span className={'text-gray-400'}>{text('Offline')}</span>
+                ) : (
+                    bytesToString(stats.rx)
+                )}
             </StatBlock>
-            <StatBlock icon={faCloudUploadAlt} title={'Network (Outbound)'}>
-                {status === 'offline' ? <span className={'text-gray-400'}>Offline</span> : bytesToString(stats.tx)}
+            <StatBlock icon={faCloudUploadAlt} title={text('Network (Outbound)')}>
+                {status === 'offline' ? (
+                    <span className={'text-gray-400'}>{text('Offline')}</span>
+                ) : (
+                    bytesToString(stats.tx)
+                )}
             </StatBlock>
         </div>
     );

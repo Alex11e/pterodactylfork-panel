@@ -19,6 +19,8 @@ import { ChevronDoubleRightIcon } from '@heroicons/react/solid';
 
 import 'xterm/css/xterm.css';
 import styles from './style.module.css';
+import usePanelText from '@/plugins/usePanelText';
+import { consoleText } from './consoleText';
 
 const theme = {
     background: th`colors.black`.toString(),
@@ -49,19 +51,26 @@ const terminalProps: ITerminalOptions = {
     fontSize: 12,
     fontFamily: th('fontFamily.mono'),
     rows: 30,
+    scrollback: 5000,
     theme: theme,
 };
 
 export default () => {
+    const text = usePanelText();
     const TERMINAL_PRELUDE = '\u001b[1m\u001b[33mcontainer@pterodactyl~ \u001b[0m';
     const ref = useRef<HTMLDivElement>(null);
     const terminal = useMemo(() => new Terminal({ ...terminalProps }), []);
-    const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon();
-    const searchBar = new SearchBarAddon({ searchAddon });
-    const webLinksAddon = new WebLinksAddon();
-    const unicode11Addon = new Unicode11Addon();
-    const scrollDownHelperAddon = new ScrollDownHelperAddon();
+    const fitAddon = useMemo(() => new FitAddon(), []);
+    const searchAddon = useMemo(() => new SearchAddon(), []);
+    const searchBar = useMemo(() => new SearchBarAddon({ searchAddon }), [searchAddon]);
+    const webLinksAddon = useMemo(() => new WebLinksAddon(), []);
+    const unicode11Addon = useMemo(() => new Unicode11Addon(), []);
+    const scrollDownHelperAddon = useMemo(() => new ScrollDownHelperAddon(), []);
+    const [query, setQuery] = useState('');
+    const [notice, setNotice] = useState('');
+    const [fontSize, setFontSize] = useState(12);
+    const [follow, setFollow] = useState(true);
+    const followRef = useRef(true);
     const { connected, instance } = ServerContext.useStoreState((state) => state.socket);
     const [canSendCommands] = usePermissions(['control.console']);
     const serverId = ServerContext.useStoreState((state) => state.server.data!.id);
@@ -74,14 +83,43 @@ export default () => {
         z-index: 10;
     }`;
 
-    const handleConsoleOutput = (line: string, prelude = false) =>
-        terminal.writeln((prelude ? TERMINAL_PRELUDE : '') + line.replace(/(?:\r\n|\r|\n)$/im, '') + '\u001b[0m');
+    const handleConsoleOutput = (line: string, prelude = false) => {
+        const position = terminal.buffer.active.viewportY;
+        terminal.writeln(
+            (prelude ? TERMINAL_PRELUDE : '') + line.replace(/(?:\r\n|\r|\n)$/im, '') + '\u001b[0m',
+            () => {
+                if (!followRef.current) terminal.scrollToLine(position);
+            }
+        );
+    };
+
+    const search = (previous = false) => {
+        if (!query || !terminal.element) return;
+        const found = previous ? searchAddon.findPrevious(query) : searchAddon.findNext(query);
+        setNotice(found ? 'Match found.' : 'No match found.');
+    };
+    const downloadLog = () => {
+        const url = URL.createObjectURL(
+            new Blob([consoleText(terminal.buffer.active)], { type: 'text/plain;charset=utf-8' })
+        );
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `console-${serverId}-${new Date().toISOString().replace(/[:.]/g, '-')}.txt`;
+        link.click();
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
+    useEffect(() => {
+        terminal.options.fontSize = fontSize;
+        if (terminal.element) fitAddon.fit();
+    }, [fontSize, terminal, fitAddon]);
+    useEffect(() => () => terminal.dispose(), [terminal]);
 
     const handleTransferStatus = (status: string) => {
         switch (status) {
             // Sent by either the source or target node if a failure occurs.
             case 'failure':
-                terminal.writeln(TERMINAL_PRELUDE + 'Transfer has failed.\u001b[0m');
+                handleConsoleOutput(text('Transfer has failed.'), true);
                 return;
         }
     };
@@ -92,7 +130,7 @@ export default () => {
         );
 
     const handlePowerChangeEvent = (state: string) =>
-        terminal.writeln(TERMINAL_PRELUDE + 'Server marked as ' + state + '...\u001b[0m');
+        handleConsoleOutput(text('Server state') + ': ' + text(state), true);
 
     const handleCommandKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'ArrowUp') {
@@ -200,10 +238,98 @@ export default () => {
 
     return (
         <div className={classNames(styles.terminal, 'relative')}>
-            <SpinnerOverlay visible={!connected} size={'large'} />
+            <div className={'flex flex-wrap items-center gap-2 bg-neutral-900 p-3 rounded-t text-xs'}>
+                <span role={'status'} className={connected ? 'text-green-400' : 'text-yellow-400'}>
+                    {text(connected ? 'Connected' : 'Disconnected')}
+                </span>
+                <input
+                    aria-label={text('Search console')}
+                    placeholder={text('Search console')}
+                    className={'bg-neutral-800 border border-neutral-600 rounded px-2 py-1 min-w-0'}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                            event.preventDefault();
+                            search(event.shiftKey);
+                        }
+                    }}
+                />
+                <button type={'button'} disabled={!query || !connected} onClick={() => search(true)}>
+                    {text('Previous')}
+                </button>
+                <button type={'button'} disabled={!query || !connected} onClick={() => search()}>
+                    {text('Next')}
+                </button>
+                <button
+                    type={'button'}
+                    onClick={async () => {
+                        try {
+                            await navigator.clipboard.writeText(
+                                terminal.getSelection() || consoleText(terminal.buffer.active)
+                            );
+                            setNotice('Copied to clipboard.');
+                        } catch {
+                            setNotice('Copy failed. Use selection and Ctrl+C.');
+                        }
+                    }}
+                >
+                    {text('Copy')}
+                </button>
+                <button type={'button'} onClick={downloadLog} title={text('Visible buffer only (up to 5000 lines).')}>
+                    {text('Download log')}
+                </button>
+                <button type={'button'} onClick={() => terminal.reset()}>
+                    {text('Clear screen')}
+                </button>
+                <label className={'flex items-center gap-1'}>
+                    <input
+                        type={'checkbox'}
+                        checked={follow}
+                        onChange={(event) => {
+                            followRef.current = event.target.checked;
+                            setFollow(event.target.checked);
+                            if (event.target.checked) terminal.scrollToBottom();
+                        }}
+                    />
+                    {text('Follow output')}
+                </label>
+                <label className={'flex items-center gap-1'}>
+                    {text('Font size')}
+                    <select
+                        className={'bg-neutral-800 rounded'}
+                        value={fontSize}
+                        onChange={(event) => setFontSize(Number(event.target.value))}
+                    >
+                        {[12, 14, 16, 18, 20].map((size) => (
+                            <option key={size} value={size}>
+                                {size}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+                {canSendCommands && (
+                    <button
+                        type={'button'}
+                        onClick={() => {
+                            setHistory([]);
+                            setHistoryIndex(-1);
+                            setNotice('Command history cleared.');
+                        }}
+                    >
+                        {text('Clear command history')}
+                    </button>
+                )}
+                <span role={'status'} aria-live={'polite'}>
+                    {notice && text(notice)}
+                </span>
+            </div>
             <div
-                className={classNames(styles.container, styles.overflows_container, { 'rounded-b': !canSendCommands })}
+                className={classNames(styles.container, styles.overflows_container, 'relative', {
+                    'rounded-b': !canSendCommands,
+                })}
             >
+                <SpinnerOverlay visible={!connected} size={'large'} />
                 <div className={'h-full'}>
                     <div id={styles.terminal} ref={ref} />
                 </div>
@@ -213,8 +339,8 @@ export default () => {
                     <input
                         className={classNames('peer', styles.command_input)}
                         type={'text'}
-                        placeholder={'Type a command...'}
-                        aria-label={'Console command input.'}
+                        placeholder={text('Type a command...')}
+                        aria-label={text('Console command input.')}
                         disabled={!instance || !connected}
                         onKeyDown={handleCommandKeyDown}
                         autoCorrect={'off'}

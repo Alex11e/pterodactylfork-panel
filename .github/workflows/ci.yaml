@@ -53,6 +53,8 @@ jobs:
       - run: vendor/bin/phpunit --bootstrap vendor/autoload.php tests/Unit
         env:
           DB_HOST: UNIT_NO_DB
+      - run: php tests/remote-access.php
+      - run: php tests/gateway-config.php
       - run: vendor/bin/phpunit tests/Integration
         env:
           DB_PORT: ${{ job.services.database.ports[3306] }}

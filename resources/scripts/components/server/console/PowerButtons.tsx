@@ -1,3 +1,4 @@
+import usePanelText from '@/plugins/usePanelText';
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/elements/button/index';
 import Can from '@/components/elements/Can';
@@ -10,6 +11,7 @@ interface PowerButtonProps {
 }
 
 export default ({ className }: PowerButtonProps) => {
+    const text = usePanelText();
     const [open, setOpen] = useState(false);
     const status = ServerContext.useStoreState((state) => state.status.value);
     const instance = ServerContext.useStoreState((state) => state.socket.instance);
@@ -42,11 +44,11 @@ export default ({ className }: PowerButtonProps) => {
                 open={open}
                 hideCloseIcon
                 onClose={() => setOpen(false)}
-                title={'Forcibly Stop Process'}
-                confirm={'Continue'}
+                title={text('Forcibly Stop Process')}
+                confirm={text('Continue')}
                 onConfirmed={onButtonClick.bind(this, 'kill-confirmed')}
             >
-                Forcibly stopping a server can lead to data corruption.
+                {text('Forcibly stopping a server can lead to data corruption.')}
             </Dialog.Confirm>
             <Can action={'control.start'}>
                 <Button
@@ -54,12 +56,12 @@ export default ({ className }: PowerButtonProps) => {
                     disabled={status !== 'offline'}
                     onClick={onButtonClick.bind(this, 'start')}
                 >
-                    Start
+                    {text('Start')}
                 </Button>
             </Can>
             <Can action={'control.restart'}>
                 <Button.Text className={'flex-1'} disabled={!status} onClick={onButtonClick.bind(this, 'restart')}>
-                    Restart
+                    {text('Restart')}
                 </Button.Text>
             </Can>
             <Can action={'control.stop'}>
@@ -68,7 +70,7 @@ export default ({ className }: PowerButtonProps) => {
                     disabled={status === 'offline'}
                     onClick={onButtonClick.bind(this, killable ? 'kill' : 'stop')}
                 >
-                    {killable ? 'Kill' : 'Stop'}
+                    {text(killable ? 'Kill' : 'Stop')}
                 </Button.Danger>
             </Can>
         </div>

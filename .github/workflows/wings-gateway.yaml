@@ -1,0 +1,22 @@
+name: Wings gateway transport
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  gateway:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: sudo apt-get update && sudo apt-get install -y nginx
+      - run: php tests/remote-access.php && php tests/gateway-config.php
+      - run: |
+          mkdir -p /tmp/pterodactyl-gateway-check
+          cd /tmp/pterodactyl-gateway-check
+          node "$GITHUB_WORKSPACE/tests/gateway-proxy.mjs" "$(command -v php)" /usr/sbin/nginx

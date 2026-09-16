@@ -1,3 +1,4 @@
+import usePanelText from '@/plugins/usePanelText';
 import React, { memo } from 'react';
 import { ServerContext } from '@/state/server';
 import Can from '@/components/elements/Can';
@@ -14,6 +15,7 @@ import { Alert } from '@/components/elements/alert';
 export type PowerAction = 'start' | 'stop' | 'restart' | 'kill';
 
 const ServerConsoleContainer = () => {
+    const text = usePanelText();
     const name = ServerContext.useStoreState((state) => state.server.data!.name);
     const description = ServerContext.useStoreState((state) => state.server.data!.description);
     const isInstalling = ServerContext.useStoreState((state) => state.server.isInstalling);
@@ -22,14 +24,20 @@ const ServerConsoleContainer = () => {
     const isNodeUnderMaintenance = ServerContext.useStoreState((state) => state.server.data!.isNodeUnderMaintenance);
 
     return (
-        <ServerContentBlock title={'Console'}>
+        <ServerContentBlock title={text('Console')}>
             {(isNodeUnderMaintenance || isInstalling || isTransferring) && (
                 <Alert type={'warning'} className={'mb-4'}>
                     {isNodeUnderMaintenance
-                        ? 'The node of this server is currently under maintenance and all actions are unavailable.'
+                        ? text(
+                              'The node of this server is currently under maintenance and all actions are unavailable.'
+                          )
                         : isInstalling
-                        ? 'This server is currently running its installation process and most actions are unavailable.'
-                        : 'This server is currently being transferred to another node and all actions are unavailable.'}
+                        ? text(
+                              'This server is currently running its installation process and most actions are unavailable.'
+                          )
+                        : text(
+                              'This server is currently being transferred to another node and all actions are unavailable.'
+                          )}
                 </Alert>
             )}
             <div className={'grid grid-cols-4 gap-4 mb-4'}>

@@ -136,6 +136,24 @@ class Node extends Model implements Identifiable
         return sprintf('%s://%s:%s', $this->scheme, $this->fqdn, $this->daemonListen);
     }
 
+    /** Get the public origin used for browser WebSockets and signed file URLs. */
+    public function getPublicConnectionAddress(): string
+    {
+        if (config('remote-access.mode') === 'proxy') {
+            return \Pterodactyl\Services\Nodes\NginxGateway::browserAddress($this->id, config('app.url'));
+        }
+        if (config('remote-access.mode', 'direct') !== 'direct') {
+            throw new \InvalidArgumentException('WINGS_BROWSER_MODE must be proxy or direct.');
+        }
+
+        return \Pterodactyl\Services\Nodes\PublicEndpoint::resolve(
+            $this->id,
+            $this->getConnectionAddress(),
+            config('remote-access.public_urls', []),
+            str_starts_with(config('app.url', ''), 'https://'),
+        );
+    }
+
     /**
      * Returns the configuration as an array.
      */

@@ -63,7 +63,7 @@ class WebsocketController extends ClientApiController
             ->setScopes(JwtScope::Websocket)
             ->handle($node, $user->id . $server->uuid);
 
-        $socket = str_replace(['https://', 'http://'], ['wss://', 'ws://'], $node->getConnectionAddress());
+        $socket = str_replace(['https://', 'http://'], ['wss://', 'ws://'], $node->getPublicConnectionAddress());
 
         return new JsonResponse([
             'data' => [

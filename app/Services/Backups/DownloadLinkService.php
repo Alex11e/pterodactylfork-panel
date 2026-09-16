@@ -22,7 +22,7 @@ class DownloadLinkService
      * Returns the URL that allows for a backup to be downloaded by an individual
      * user, or by the Wings control software.
      */
-    public function handle(Backup $backup, User $user): string
+    public function handle(Backup $backup, User $user, bool $public = false): string
     {
         if ($backup->disk === Backup::ADAPTER_AWS_S3) {
             return $this->getS3BackupUrl($backup);
@@ -38,7 +38,9 @@ class DownloadLinkService
             ->setScopes(JwtScope::BackupDownload)
             ->handle($backup->server->node, $user->id . $backup->server->uuid);
 
-        return sprintf('%s/download/backup?token=%s', $backup->server->node->getConnectionAddress(), $token->toString());
+        $node = $backup->server->node;
+
+        return sprintf('%s/download/backup?token=%s', $public ? $node->getPublicConnectionAddress() : $node->getConnectionAddress(), $token->toString());
     }
 
     /**

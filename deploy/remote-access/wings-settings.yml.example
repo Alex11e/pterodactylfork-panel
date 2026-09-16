@@ -1,0 +1,15 @@
+# Merge these fields into the existing /etc/pterodactyl/config.yml.
+# This is NOT a complete Wings configuration. Preserve uuid, token_id, token and system.
+# Same-host panel + nginx + Wings example. For separate hosts, use a private interface
+# reachable from the panel and permit the panel host in the firewall.
+api:
+  host: 127.0.0.1
+  port: 8080
+  ssl:
+    enabled: false
+  upload_limit: 100
+remote: https://panel.example.com
+# The remote origin is automatically allowed. Add only other panel origins you actually use.
+allowed_origins: []
+# Manual bind/TLS settings must survive panel-generated configuration updates.
+ignore_panel_config_updates: true

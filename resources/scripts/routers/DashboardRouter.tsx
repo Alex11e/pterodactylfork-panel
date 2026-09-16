@@ -1,3 +1,4 @@
+import usePanelText from '@/plugins/usePanelText';
 import React from 'react';
 import { NavLink, Route, Switch } from 'react-router-dom';
 import NavigationBar from '@/components/NavigationBar';
@@ -10,6 +11,7 @@ import Spinner from '@/components/elements/Spinner';
 import routes from '@/routers/routes';
 
 export default () => {
+    const text = usePanelText();
     const location = useLocation();
 
     return (
@@ -22,7 +24,7 @@ export default () => {
                             .filter((route) => !!route.name)
                             .map(({ path, name, exact = false }) => (
                                 <NavLink key={path} to={`/account/${path}`.replace('//', '/')} exact={exact}>
-                                    {name}
+                                    {text(name || '')}
                                 </NavLink>
                             ))}
                     </div>

@@ -1,3 +1,4 @@
+import usePanelText from '@/plugins/usePanelText';
 import React, { useEffect, useState } from 'react';
 import { Websocket } from '@/plugins/Websocket';
 import { ServerContext } from '@/state/server';
@@ -10,6 +11,7 @@ import tw from 'twin.macro';
 const reconnectErrors = ['jwt: exp claim is invalid', 'jwt: created too far in past (denylist)'];
 
 export default () => {
+    const text = usePanelText();
     let updatingToken = false;
     const [error, setError] = useState<'connecting' | string>('');
     const { connected, instance } = ServerContext.useStoreState((state) => state.socket);
@@ -115,11 +117,11 @@ export default () => {
                         <>
                             <Spinner size={'small'} />
                             <p css={tw`ml-2 text-sm text-red-100`}>
-                                We&apos;re having some trouble connecting to your server, please wait...
+                                {text("We're having some trouble connecting to your server, please wait...")}
                             </p>
                         </>
                     ) : (
-                        <p css={tw`ml-2 text-sm text-white`}>{error}</p>
+                        <p css={tw`ml-2 text-sm text-white`}>{text(error)}</p>
                     )}
                 </ContentContainer>
             </div>

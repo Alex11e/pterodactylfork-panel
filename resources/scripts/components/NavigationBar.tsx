@@ -1,3 +1,5 @@
+import LanguageSelect from '@/components/LanguageSelect';
+import usePanelText from '@/plugins/usePanelText';
 import * as React from 'react';
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
@@ -33,6 +35,7 @@ const RightNavigation = styled.div`
 `;
 
 export default () => {
+    const text = usePanelText();
     const name = useStoreState((state: ApplicationStore) => state.settings.data!.name);
     const rootAdmin = useStoreState((state: ApplicationStore) => state.user.data!.rootAdmin);
     const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -60,27 +63,28 @@ export default () => {
                     </Link>
                 </div>
                 <RightNavigation className={'flex h-full items-center justify-center'}>
+                    <LanguageSelect />
                     <SearchContainer />
-                    <Tooltip placement={'bottom'} content={'Dashboard'}>
+                    <Tooltip placement={'bottom'} content={text('Dashboard')}>
                         <NavLink to={'/'} exact>
                             <FontAwesomeIcon icon={faLayerGroup} />
                         </NavLink>
                     </Tooltip>
                     {rootAdmin && (
-                        <Tooltip placement={'bottom'} content={'Admin'}>
+                        <Tooltip placement={'bottom'} content={text('Admin')}>
                             <a href={'/admin'} rel={'noreferrer'}>
                                 <FontAwesomeIcon icon={faCogs} />
                             </a>
                         </Tooltip>
                     )}
-                    <Tooltip placement={'bottom'} content={'Account Settings'}>
+                    <Tooltip placement={'bottom'} content={text('Account Settings')}>
                         <NavLink to={'/account'}>
                             <span className={'flex items-center w-5 h-5'}>
                                 <Avatar.User />
                             </span>
                         </NavLink>
                     </Tooltip>
-                    <Tooltip placement={'bottom'} content={'Sign Out'}>
+                    <Tooltip placement={'bottom'} content={text('Sign Out')}>
                         <button onClick={onTriggerLogout}>
                             <FontAwesomeIcon icon={faSignOutAlt} />
                         </button>

@@ -1,0 +1,14 @@
+.git
+node_modules
+vendor
+.env
+.env.*
+!.env.example
+storage/logs/*
+storage/framework/*
+bootstrap/cache/*.php
+deploy/.env
+deploy/backups
+deploy/state
+*.zip
+*.log

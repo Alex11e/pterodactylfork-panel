@@ -1,3 +1,4 @@
+import usePanelText from '@/plugins/usePanelText';
 import TransferListener from '@/components/server/TransferListener';
 import React, { useEffect, useState } from 'react';
 import { NavLink, Route, Switch, useRouteMatch } from 'react-router-dom';
@@ -22,6 +23,7 @@ import PermissionRoute from '@/components/elements/PermissionRoute';
 import routes from '@/routers/routes';
 
 export default () => {
+    const text = usePanelText();
     const match = useRouteMatch<{ id: string }>();
     const location = useLocation();
 
@@ -82,12 +84,12 @@ export default () => {
                                         route.permission ? (
                                             <Can key={route.path} action={route.permission} matchAny>
                                                 <NavLink to={to(route.path, true)} exact={route.exact}>
-                                                    {route.name}
+                                                    {text(route.name || '')}
                                                 </NavLink>
                                             </Can>
                                         ) : (
                                             <NavLink key={route.path} to={to(route.path, true)} exact={route.exact}>
-                                                {route.name}
+                                                {text(route.name || '')}
                                             </NavLink>
                                         )
                                     )}

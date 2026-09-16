@@ -2,6 +2,16 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import I18NextHttpBackend, { HttpBackendOptions } from 'i18next-http-backend';
 import I18NextMultiloadBackendAdapter from 'i18next-multiload-backend-adapter';
+import { hu, en } from '@/locales/fork';
+
+let language = 'hu';
+try {
+    const saved = localStorage.getItem('alex-panel:language:v1');
+    if (saved === 'hu' || saved === 'en') language = saved;
+} catch {
+    /* Browser storage is optional. */
+}
+document.documentElement.lang = language;
 
 // If we're using HMR use a unique hash per page reload so that we're always
 // doing cache busting. Otherwise just use the builder provided hash value in
@@ -12,7 +22,9 @@ i18n.use(I18NextMultiloadBackendAdapter)
     .use(initReactI18next)
     .init({
         debug: process.env.DEBUG === 'true',
-        lng: 'en',
+        lng: language,
+        resources: { hu: { fork: hu }, en: { fork: en } },
+        partialBundledLanguages: true,
         fallbackLng: 'en',
         keySeparator: '.',
         backend: {

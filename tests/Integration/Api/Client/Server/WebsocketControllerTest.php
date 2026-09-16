@@ -14,6 +14,43 @@ use Pterodactyl\Tests\Integration\Api\Client\ClientApiIntegrationTestCase;
 
 class WebsocketControllerTest extends ClientApiIntegrationTestCase
 {
+    public function testPublicEndpointKeepsInternalJwtAudienceAndSubuserPermissions()
+    {
+        config()->set('remote-access.mode', 'direct');
+        $permissions = [Permission::ACTION_WEBSOCKET_CONNECT];
+        [$user, $server] = $this->generateTestAccount($permissions);
+        config()->set('remote-access.public_urls', [$server->node->id => 'https://public-wings.example.com:8443']);
+
+        $response = $this->actingAs($user)->getJson("/api/client/servers/$server->uuid/websocket")
+            ->assertOk()
+            ->assertJsonPath('data.socket', "wss://public-wings.example.com:8443/api/servers/$server->uuid/ws");
+
+        $config = Configuration::forSymmetricSigner(new Sha256(), $key = InMemory::plainText($server->node->getDecryptedKey()));
+        $token = $config->parser()->parse($response->json('data.token'));
+        $this->assertTrue($config->validator()->validate($token, new SignedWith(new Sha256(), $key)));
+        $this->assertTrue($token->isPermittedFor($server->node->getConnectionAddress()));
+        $this->assertSame($permissions, $token->claims()->get('permissions'));
+        $this->assertEquals(JwtScope::Websocket->value, $token->claims()->get('scope'));
+    }
+
+    public function testProxyEndpointUsesPanelOriginAndKeepsSubuserPermissions()
+    {
+        $permissions = [Permission::ACTION_WEBSOCKET_CONNECT];
+        [$user, $server] = $this->generateTestAccount($permissions);
+        config()->set('remote-access.mode', 'proxy');
+        config()->set('app.url', 'https://panel.example.com');
+        config()->set('remote-access.public_urls', [$server->node->id => 'https://unused.example.com']);
+
+        $response = $this->actingAs($user)->getJson("/api/client/servers/$server->uuid/websocket")
+            ->assertOk()
+            ->assertJsonPath('data.socket', "wss://panel.example.com/_wings/{$server->node->id}/api/servers/$server->uuid/ws");
+        $config = Configuration::forSymmetricSigner(new Sha256(), $key = InMemory::plainText($server->node->getDecryptedKey()));
+        $token = $config->parser()->parse($response->json('data.token'));
+        $this->assertTrue($config->validator()->validate($token, new SignedWith(new Sha256(), $key)));
+        $this->assertTrue($token->isPermittedFor($server->node->getConnectionAddress()));
+        $this->assertSame($permissions, $token->claims()->get('permissions'));
+    }
+
     /**
      * Test that a subuser attempting to connect to the websocket receives an error if they
      * do not explicitly have the permission.

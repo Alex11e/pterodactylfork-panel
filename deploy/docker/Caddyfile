@@ -1,0 +1,6 @@
+{
+    email {$ACME_EMAIL}
+}
+{$PANEL_DOMAIN} {
+    reverse_proxy panel:80
+}

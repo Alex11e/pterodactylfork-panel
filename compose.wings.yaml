@@ -1,0 +1,15 @@
+services:
+  wings:
+    build:
+      context: .
+      dockerfile: deploy/docker/Wings.Dockerfile
+    image: alex-wings:local
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/pterodactyl:/etc/pterodactyl:ro
+      - /var/lib/pterodactyl:/var/lib/pterodactyl
+      - /var/log/pterodactyl:/var/log/pterodactyl
+      - /tmp/pterodactyl:/tmp/pterodactyl
+    command: [--config, /etc/pterodactyl/config.yml]

@@ -1,3 +1,4 @@
+import LanguageSelect from '@/components/LanguageSelect';
 import React, { forwardRef } from 'react';
 import { Form } from 'formik';
 import styled from 'styled-components/macro';
@@ -30,6 +31,9 @@ const Container = styled.div`
 
 export default forwardRef<HTMLFormElement, Props>(({ title, ...props }, ref) => (
     <Container>
+        <div css={tw`flex justify-end`}>
+            <LanguageSelect />
+        </div>
         {title && <h2 css={tw`text-3xl text-center text-neutral-100 font-medium py-4`}>{title}</h2>}
         <FlashMessageRender css={tw`mb-2 px-1`} />
         <Form {...props} ref={ref}>
