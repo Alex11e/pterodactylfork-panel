@@ -18,6 +18,58 @@ export default createGlobalStyle`
         letter-spacing: 0.015em;
     }
 
+    /* Built-in fork themes. Tailwind utility colors are overridden here so
+       existing Blueprint-style components inherit the selected palette. */
+    body[data-panel-theme] {
+        --panel-bg: #1f2937;
+        --panel-surface: #111827;
+        --panel-raised: #374151;
+        --panel-input: #4b5563;
+        --panel-text: #e5e7eb;
+        --panel-muted: #9ca3af;
+        background-color: var(--panel-bg) !important;
+        color: var(--panel-text) !important;
+    }
+
+    body[data-panel-theme='emerald'] {
+        --panel-bg: #071b17;
+        --panel-surface: #092923;
+        --panel-raised: #123d33;
+        --panel-input: #1b5446;
+        --panel-text: #e3fff5;
+        --panel-muted: #9ad6c4;
+    }
+
+    body[data-panel-theme='amethyst'] {
+        --panel-bg: #171226;
+        --panel-surface: #21183a;
+        --panel-raised: #3a2a5c;
+        --panel-input: #523b78;
+        --panel-text: #f4edff;
+        --panel-muted: #c7b9e5;
+    }
+
+    body[data-panel-theme='sunset'] {
+        --panel-bg: #25151a;
+        --panel-surface: #351b22;
+        --panel-raised: #5a2c31;
+        --panel-input: #754039;
+        --panel-text: #fff1e6;
+        --panel-muted: #e8b9a5;
+    }
+
+    body[data-panel-theme] .bg-neutral-900 { background-color: var(--panel-surface) !important; }
+    body[data-panel-theme] .bg-neutral-800 { background-color: var(--panel-bg) !important; }
+    body[data-panel-theme] .bg-neutral-700 { background-color: var(--panel-raised) !important; }
+    body[data-panel-theme] .bg-neutral-600,
+    body[data-panel-theme] .bg-neutral-500 { background-color: var(--panel-input) !important; }
+    body[data-panel-theme] .text-neutral-100,
+    body[data-panel-theme] .text-neutral-200,
+    body[data-panel-theme] .text-neutral-300 { color: var(--panel-text) !important; }
+    body[data-panel-theme] .text-neutral-400,
+    body[data-panel-theme] .text-neutral-500,
+    body[data-panel-theme] .text-neutral-600 { color: var(--panel-muted) !important; }
+
     h1, h2, h3, h4, h5, h6 {
         ${tw`font-medium tracking-normal font-header`};
     }

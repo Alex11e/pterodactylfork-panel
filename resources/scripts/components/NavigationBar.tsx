@@ -14,6 +14,7 @@ import http from '@/api/http';
 import SpinnerOverlay from '@/components/elements/SpinnerOverlay';
 import Tooltip from '@/components/elements/tooltip/Tooltip';
 import Avatar from '@/components/Avatar';
+import ThemeSelect from '@/components/ThemeSelect';
 
 const RightNavigation = styled.div`
     & > a,
@@ -64,6 +65,7 @@ export default () => {
                 </div>
                 <RightNavigation className={'flex h-full items-center justify-center'}>
                     <LanguageSelect />
+                    <ThemeSelect />
                     <SearchContainer />
                     <Tooltip placement={'bottom'} content={text('Dashboard')}>
                         <NavLink to={'/'} exact>
