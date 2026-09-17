@@ -3,7 +3,7 @@
     "target": "es2015",
     "module": "es2020",
     "jsx": "react-jsx",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "lib": [
       "es2015",
       "dom"
@@ -16,7 +16,6 @@
     "skipDefaultLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "baseUrl": ".",
     "verbatimModuleSyntax": false,
     "paths": {
       "@/*": [

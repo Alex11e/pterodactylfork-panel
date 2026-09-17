@@ -271,6 +271,9 @@ remove_wings_only() {
     fi
     remove_wings_resources "$mode"
     rm -f "$INSTALL_DIR/deploy/state/local-wings-owned" "$INSTALL_DIR/deploy/state/wings.enabled"
+    if [[ $mode == docker ]]; then
+        compose up -d --wait --wait-timeout 180
+    fi
     printf 'A helyi Wings eltávolítása befejeződött; a panel és az adatbázisa megmaradt.\n'
 }
 
@@ -375,8 +378,7 @@ new_install() {
     {
         printf 'APP_URL=%s\nAPP_KEY=base64:%s\nHASHIDS_SALT=%s\n' "$app_url" "$(openssl rand -base64 32)" "$(openssl rand -hex 24)"
         printf 'DB_PASSWORD=%s\nDB_ROOT_PASSWORD=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)"
-        printf 'APP_TIMEZONE=Europe/Budapest\nPANEL_BIND_IP=%s\nPANEL_PORT=8080\n' "$bind_ip"
-            printf 'APP_TIMEZONE=Europe/Budapest\nPANEL_BIND_IP=%s\nPANEL_PORT=8080\nPANEL_BACKEND=%s\n' "$bind_ip" "$INSTALL_BACKEND"
+        printf 'APP_TIMEZONE=Europe/Budapest\nPANEL_BIND_IP=%s\nPANEL_PORT=8080\nPANEL_BACKEND=%s\n' "$bind_ip" "$INSTALL_BACKEND"
         printf 'TLS_ENABLED=%s\nPANEL_DOMAIN=%s\nACME_EMAIL=%s\nMAIL_MAILER=log\n' "$tls" "$domain" "$email"
     } > "$INSTALL_DIR/deploy/.env"
     chmod 0600 "$INSTALL_DIR/deploy/.env"

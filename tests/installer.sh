@@ -12,6 +12,11 @@ for value in 'bad' 'a@b' 'x@example.com;id' $'x@example.com\nAPP_KEY=bad'; do
     if valid_email "$value"; then die 'Accepted invalid email'; fi
     count=$((count+1))
 done
+for value in 127.0.0.1 192.168.1.20 10.0.0.5; do valid_ipv4 "$value"; count=$((count+1)); done
+for value in 256.1.1.1 192.168.1 192.168.1.1/24 '192.168.1.1;id'; do
+    if valid_ipv4 "$value"; then die "Accepted invalid IPv4: $value"; fi
+    count=$((count+1))
+done
 valid_directory '/opt/alex panel'; count=$((count+1))
 for value in / /etc /usr /var ../panel /opt/../etc; do
     if valid_directory "$value"; then die "Accepted invalid directory: $value"; fi
