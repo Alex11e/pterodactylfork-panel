@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 all_in_one_wings() {
-    local ip port memory disk host gateway subnet mode candidate container
+    local ip port memory disk host gateway subnet mode candidate container binary
     mode=$(backend)
     [[ -f $INSTALL_DIR/deploy/state/installed ]] || die 'Előbb fejezd be a panel telepítését a 8-as menüvel.'
     if [[ -f /etc/pterodactyl/config.yml && ! -f $INSTALL_DIR/deploy/state/local-wings-owned ]]; then
@@ -9,8 +9,8 @@ all_in_one_wings() {
     fi
     read -r -p 'Játékszerver nyilvános IPv4-címe: ' ip
     read -r -p 'Első játékport [25565]: ' port; port=${port:-25565}
-    read -r -p 'Node memória-keret MiB-ban [2048]: ' memory; memory=${memory:-2048}
-    read -r -p 'Node lemezkeret MiB-ban [10240]: ' disk; disk=${disk:-10240}
+    read -r -p 'Új node memória-kerete MiB-ban [2048; meglévőnél megmarad]: ' memory; memory=${memory:-2048}
+    read -r -p 'Új node lemezkerete MiB-ban [10240; meglévőnél megmarad]: ' disk; disk=${disk:-10240}
     [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ && $port =~ ^[0-9]+$ && $memory =~ ^[0-9]+$ && $disk =~ ^[0-9]+$ ]] || die 'Hibás IPv4 vagy számbemenet.'
     printf 'A Wings API belső címen fut. Játékport: %s TCP/UDP, SFTP: 2022. A tűzfal és NAT portjait külön engedélyezd.\n' "$port"
     confirm 'Létrehozzam/frissítsem a helyi node-ot és indítsam a Wingst?' || return 0
@@ -40,15 +40,17 @@ all_in_one_wings() {
     if [[ $mode == docker ]]; then
         touch "$INSTALL_DIR/deploy/state/wings.enabled"
         compose build wings
-        compose up -d wings
+        compose up -d --force-recreate wings
         compose exec -T panel /bin/sh -ec 'php /app/artisan p:remote-access:nginx --no-ansi > /etc/nginx/gateway/nodes.conf; nginx -t; nginx -s reload'
     else
         # Reuse the pinned Go build without installing a global Go compiler on the host.
         docker build --target build -t alex-wings-builder -f "$INSTALL_DIR/deploy/docker/Wings.Dockerfile" "$INSTALL_DIR"
         container=$(docker create --entrypoint /bin/true alex-wings-builder)
-        docker cp "$container:/wings" /usr/local/bin/alex-wings
+        binary=$(mktemp /usr/local/bin/alex-wings.XXXXXX)
+        docker cp "$container:/wings" "$binary"
         docker rm "$container" >/dev/null
-        chmod 755 /usr/local/bin/alex-wings
+        chmod 755 "$binary"
+        mv -f "$binary" /usr/local/bin/alex-wings
         cat > /etc/systemd/system/alex-wings.service <<'UNIT'
 [Unit]
 Description=Alex Wings game-server daemon

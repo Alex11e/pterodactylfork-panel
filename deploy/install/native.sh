@@ -22,11 +22,17 @@ native_node_tools() {
     curl -fsSL https://nodejs.org/dist/latest-v22.x/SHASUMS256.txt -o "$staging/SHASUMS256.txt"
     archive=$(awk -v suffix="linux-$arch.tar.xz" '$2 ~ suffix"$" {print $2}' "$staging/SHASUMS256.txt")
     [[ $archive =~ ^node-v22\.[0-9]+\.[0-9]+-linux-(x64|arm64)\.tar\.xz$ ]] || die 'Érvénytelen Node.js kiadáslista.'
-    curl -fsSL "https://nodejs.org/dist/latest-v22.x/$archive" -o "$staging/$archive"
-    (cd "$staging" && grep " $archive$" SHASUMS256.txt | sha256sum -c -)
-    tar -xJf "$staging/$archive" -C "$staging"
     version=${archive%.tar.xz}
-    export PATH="$staging/$version/bin:$PATH"
+    if [[ ! -x $tools/$version/bin/node ]]; then
+        curl -fsSL "https://nodejs.org/dist/latest-v22.x/$archive" -o "$staging/$archive"
+        (cd "$staging" && grep " $archive$" SHASUMS256.txt | sha256sum -c -)
+        tar -xJf "$staging/$archive" -C "$staging"
+        [[ ! -e $tools/$version ]] || die 'Hiányos Node.js toolchain található; ellenőrizd az /opt/alex-panel-tools könyvtárat.'
+        mv "$staging/$version" "$tools/$version"
+    fi
+    [[ $staging == "$tools"/download.* && -d $staging ]] || die 'Érvénytelen ideiglenes eszközkönyvtár.'
+    rm -rf -- "$staging"
+    export PATH="$tools/$version/bin:$PATH"
     export npm_config_cache="$INSTALL_DIR/deploy/cache/npm"
     npm install --prefix "$tools/yarn" --ignore-scripts --no-audit --no-fund yarn@1.22.22
     export PATH="$tools/yarn/node_modules/.bin:$PATH"
@@ -231,8 +237,8 @@ ENV
         mkdir -p /etc/letsencrypt/renewal-hooks/deploy
         printf '#!/bin/sh\nsystemctl reload nginx\n' > /etc/letsencrypt/renewal-hooks/deploy/alex-panel
         chmod 755 /etc/letsencrypt/renewal-hooks/deploy/alex-panel
-        curl --fail --silent --show-error --resolve "$domain:443:127.0.0.1" "https://$domain/auth/login" -o /dev/null
-    else curl --fail --silent --show-error http://127.0.0.1:8080/auth/login -o /dev/null; fi
+        curl --noproxy '*' --fail --silent --show-error --resolve "$domain:443:127.0.0.1" "https://$domain/auth/login" -o /dev/null
+    else curl --noproxy '*' --fail --silent --show-error http://127.0.0.1:8080/auth/login -o /dev/null; fi
     touch "$INSTALL_DIR/deploy/state/installed"
     if [[ $was_installed == false ]]; then native_artisan p:user:make --admin=1; fi
     printf '\nNatív Nginx + PHP-FPM panel elindult. Cím: %s\n' "$(native_env APP_URL)"

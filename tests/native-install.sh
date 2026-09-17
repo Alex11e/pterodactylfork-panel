@@ -40,8 +40,8 @@ cp deploy/.env "$saved_env"
 sed -i 's/^TLS_ENABLED=false/TLS_ENABLED=true/' deploy/.env
 printf 'PANEL_DOMAIN=%s\n' "$domain" >> deploy/.env
 native_nginx_config
-[[ $(curl -s -o /dev/null -w '%{http_code}' --resolve "$domain:80:127.0.0.1" "http://$domain/auth/login") == 301 ]]
-curl -fsS --cacert "/etc/letsencrypt/live/$domain/fullchain.pem" --resolve "$domain:443:127.0.0.1" "https://$domain/auth/login" -o /dev/null
+[[ $(curl --noproxy '*' -s -o /dev/null -w '%{http_code}' --resolve "$domain:80:127.0.0.1" "http://$domain/auth/login") == 301 ]]
+curl --noproxy '*' -fsS --cacert "/etc/letsencrypt/live/$domain/fullchain.pem" --resolve "$domain:443:127.0.0.1" "https://$domain/auth/login" -o /dev/null
 cp "$saved_env" deploy/.env
 rm -f "$saved_env"
 native_nginx_config
@@ -57,3 +57,14 @@ i
 INPUT
 panel_artisan p:installer:node --check
 echo 'PASS: native Wings systemd service and authenticated panel connection.'
+token_before=$(sed -n 's/^token: //p' /etc/pterodactyl/config.yml)
+all_in_one_wings <<'INPUT'
+127.0.0.1
+25565
+2048
+10240
+i
+INPUT
+[[ $(sed -n 's/^token: //p' /etc/pterodactyl/config.yml) == "$token_before" ]]
+panel_artisan p:installer:node --check
+echo 'PASS: replace a running native Wings binary and preserve the node token.'

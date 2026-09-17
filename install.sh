@@ -251,6 +251,8 @@ main() {
         *) die 'Ismeretlen argumentum. Használd: --help' ;;
     esac
     need_root
+    exec 9>/var/lock/alex-panel-installer.lock
+    flock -n 9 || die 'Egy másik Alex Panel telepítés már fut. Várd meg a befejezését.'
     valid_directory "$INSTALL_DIR" || die 'Érvénytelen INSTALL_DIR.'
     printf '\nAlex Panel – magyar konzol, PufferPanel-szerű proxy és Docker\n\n1) Új panel HTTPS-sel\n2) Új panel helyi HTTP teszthez\n3) Helyi Wings automatikus beállítása\n4) Panel adatbázis + storage mentése\n5) Állapot és naplók\n6) Admin felhasználó létrehozása\n7) Szolgáltatások újraindítása\n8) Javított forrás letöltése és telepítés javítása/folytatása\n0) Kilépés\n'
     local choice

@@ -43,3 +43,14 @@ i
 INPUT
 panel_artisan p:installer:node --check
 echo 'PASS: all-in-one node provisioning and authenticated Wings connection.'
+token_before=$(sed -n 's/^token: //p' /etc/pterodactyl/config.yml)
+all_in_one_wings <<'INPUT'
+127.0.0.1
+25565
+2048
+10240
+i
+INPUT
+[[ $(sed -n 's/^token: //p' /etc/pterodactyl/config.yml) == "$token_before" ]]
+panel_artisan p:installer:node --check
+echo 'PASS: recreate Wings with updated configuration and preserve the node token.'
