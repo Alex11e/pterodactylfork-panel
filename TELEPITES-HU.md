@@ -41,7 +41,7 @@ Dockerben futtatja; a natív Wings bináris fordításához is Docker buildet ha
 A panel indítása után a varázsló bekéri a játékok IPv4-címét, az első portot,
 a node memória- és lemezkeretét. Létrehozza az `Alex Local` node-ot, az első
 IP:port kiosztást és a Wings konfigurációját. A titkos token közvetlenül a
-`/etc/pterodactyl/config.yml` fájlba kerül, nem a terminálba.
+`/opt/alex-panel/deploy/wings/config.yml` fájlba kerül, nem a terminálba. Egyedi telepítési könyvtár esetén ugyanez a fájl az `<INSTALL_DIR>/deploy/wings/config.yml` útvonalon található.
 
 A Wings API-ja belső címen, 8081-en fut. A játékportot és szükség esetén a
 2022-es SFTP-portot a tűzfal/NAT beállításában külön engedélyezni kell.

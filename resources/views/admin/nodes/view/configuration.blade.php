@@ -38,7 +38,7 @@
                 <pre class="no-margin">{{ $node->getYamlConfiguration() }}</pre>
             </div>
             <div class="box-footer">
-                <p class="no-margin">This file should be placed in your daemon's root directory (usually <code>/etc/pterodactyl</code>) in a file called <code>config.yml</code>.</p>
+                <p class="no-margin">A telepítő által kezelt telepítésnél a fájl helye: <code>{{ config('pterodactyl.wings.config_path') }}</code>.</p>
             </div>
         </div>
     </div>
@@ -55,6 +55,7 @@
             </div>
             <div class="box-footer">
                 <button type="button" id="configTokenBtn" class="btn btn-sm btn-default" style="width:100%;">Generate Token</button>
+                <p class="text-muted small no-margin" style="margin-top:10px;">A token csak a konfiguráló parancshoz használható, és nem jelenik meg a node YAML-ban.</p>
             </div>
         </div>
     </div>
@@ -64,16 +65,26 @@
 @section('footer-scripts')
     @parent
     <script>
+    function escapeHtml(value) {
+        return $('<div>').text(value).html();
+    }
+
     $('#configTokenBtn').on('click', function (event) {
         $.ajax({
             method: 'POST',
-            url: '{{ route('admin.nodes.view.configuration.token', $node->id) }}',
+            url: '{{ route('admin.nodes.view.configuration.token', ['node' => $node->id]) }}',
             headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         }).done(function (data) {
+            const panelUrl = @json(rtrim(config('app.url'), '/'));
+            const token = data.token;
+            const node = data.node;
+            const allowInsecure = @json((bool) config('app.debug')) ? ' --allow-insecure' : '';
+            const configDirectory = @json(dirname(config('pterodactyl.wings.config_path')));
+            const command = 'cd ' + configDirectory + ' && sudo wings configure --panel-url ' + panelUrl + ' --token ' + token + ' --node ' + node + allowInsecure;
             swal({
                 type: 'success',
                 title: 'Token created.',
-                text: '<p>To auto-configure your node run the following command:<br /><small><pre>cd /etc/pterodactyl && sudo wings configure --panel-url {{ config('app.url') }} --token ' + data.token + ' --node ' + data.node + '{{ config('app.debug') ? ' --allow-insecure' : '' }}</pre></small></p>',
+                text: '<p>To auto-configure your node run the following command:<br /><small><pre>' + escapeHtml(command) + '</pre></small></p>',
                 html: true
             })
         }).fail(function () {

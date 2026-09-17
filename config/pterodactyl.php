@@ -19,6 +19,10 @@ return [
         'tunnel_hostname' => env('CLOUDFLARE_TUNNEL_HOSTNAME', ''),
     ],
 
+    'wings' => [
+        'config_path' => env('WINGS_CONFIG_DIR', base_path('deploy/wings')) . '/config.yml',
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Service Author

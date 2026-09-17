@@ -79,8 +79,8 @@ class InstallerNodeCommand extends Command
             return $node;
         });
         $config = $node->getConfiguration();
-        $config['api']['host'] = $this->option('host');
-        $config['api']['ssl']['enabled'] = false;
+        $config['api']['host'] = '0.0.0.0';
+        $config['api']['ssl'] = ['enabled' => false];
         $config['docker']['network'] = [
             'name' => 'alex-games', 'network_mode' => 'alex-games', 'interface' => $this->option('gateway'),
             'interfaces' => ['v4' => ['subnet' => $this->option('subnet'), 'gateway' => $this->option('gateway')]],

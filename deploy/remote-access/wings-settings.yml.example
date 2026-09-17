@@ -1,4 +1,4 @@
-# Merge these fields into the existing /etc/pterodactyl/config.yml.
+# Merge these fields into the installer-managed deploy/wings/config.yml.
 # This is NOT a complete Wings configuration. Preserve uuid, token_id, token and system.
 # Same-host panel + nginx + Wings example. For separate hosts, use a private interface
 # reachable from the panel and permit the panel host in the firewall.

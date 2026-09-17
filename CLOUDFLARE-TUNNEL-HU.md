@@ -49,7 +49,7 @@ curl -I http://127.0.0.1:8080
 docker compose --env-file deploy/.env -f compose.yaml ps
 ```
 
-A panel láblécében és az adminisztrációs áttekintőben a `config/app.php` szerinti panelverzió jelenik meg. A telepítő ugyanazt a verziót kiírja a sikeres indítás végén.
+A panel láblécében és az adminisztrációs áttekintőben a `config/app.php` szerinti panelverzió jelenik meg. A telepítő ugyanazt a verziót kiírja a sikeres indítás végén. A Wings konfiguráció host oldali helye: `/opt/alex-panel/deploy/wings/config.yml`.
 
 ## Frissítés és mentés
 

@@ -37,6 +37,8 @@ class MailController extends Controller
     {
         return view('admin.settings.mail', [
             'disabled' => $this->config->get('mail.default') !== 'smtp',
+            'mailer' => $this->config->get('mail.default'),
+            'fromAddress' => $this->config->get('mail.from.address'),
         ]);
     }
 

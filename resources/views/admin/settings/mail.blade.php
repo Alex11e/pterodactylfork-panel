@@ -26,7 +26,13 @@
                         <div class="row">
                             <div class="col-xs-12">
                                 <div class="alert alert-info no-margin-bottom">
-                                    This interface is limited to instances using SMTP as the mail driver. Please either use <code>php artisan p:environment:mail</code> command to update your email settings, or set <code>MAIL_DRIVER=smtp</code> in your environment file.
+                                    Current mail driver: <code>{{ $mailer }}</code>. @if($mailer === 'log') Emails are written to the Laravel log and are not sent. @else This driver is configured outside the SMTP settings page. @endif
+                                </div>
+                                <div class="box-body">
+                                    <p class="no-margin">Sender address: <code>{{ $fromAddress }}</code></p>
+                                    <p class="text-muted small no-margin">To enable real email delivery, configure SMTP with:</p>
+                                    <pre class="no-margin">php artisan p:environment:mail --driver=smtp</pre>
+                                    <p class="text-muted small no-margin">Then restart the panel services. In Docker mode, run the command inside the panel container.</p>
                                 </div>
                             </div>
                         </div>

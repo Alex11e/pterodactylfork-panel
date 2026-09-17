@@ -59,7 +59,7 @@ i
 INPUT
 panel_artisan p:installer:node --check
 echo 'PASS: native Wings systemd service and authenticated panel connection.'
-token_before=$(sed -n 's/^token: //p' /etc/pterodactyl/config.yml)
+token_before=$(sed -n 's/^token: //p' deploy/wings/config.yml)
 all_in_one_wings <<'INPUT'
 127.0.0.1
 25565
@@ -67,6 +67,6 @@ all_in_one_wings <<'INPUT'
 10240
 i
 INPUT
-[[ $(sed -n 's/^token: //p' /etc/pterodactyl/config.yml) == "$token_before" ]]
+[[ $(sed -n 's/^token: //p' deploy/wings/config.yml) == "$token_before" ]]
 panel_artisan p:installer:node --check
 echo 'PASS: replace a running native Wings binary and preserve the node token.'

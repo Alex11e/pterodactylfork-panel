@@ -35,6 +35,22 @@ compose() {
     docker compose "${args[@]}" "$@"
 }
 existing() { [[ -f $INSTALL_DIR/deploy/.env ]] || die "Nincs telepítés itt: $INSTALL_DIR"; }
+prepare_wings_path() {
+    existing
+    local configured legacy target
+    configured=$(sed -n 's/^WINGS_CONFIG_DIR=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
+    target=${configured:-$INSTALL_DIR/deploy/wings}
+    mkdir -p "$target"
+    if [[ -z $configured ]]; then
+        printf 'WINGS_CONFIG_DIR=%s\n' "$target" >> "$INSTALL_DIR/deploy/.env"
+    fi
+    legacy=/etc/pterodactyl/config.yml
+    if [[ ! -f $target/config.yml && -f $legacy ]]; then
+        cp "$legacy" "$target/config.yml"
+        chmod 600 "$target/config.yml"
+        printf 'A régi Wings konfigurációt átmásoltam ide: %s/config.yml\n' "$target"
+    fi
+}
 backend() {
     local mode=docker
     if [[ -f $INSTALL_DIR/deploy/state/backend ]]; then mode=$(cat "$INSTALL_DIR/deploy/state/backend"); fi
@@ -60,6 +76,7 @@ install_wizard() {
 
 install_local_wings() {
     existing
+    prepare_wings_path
     [[ -f $INSTALL_DIR/deploy/install/all-in-one.sh ]] || die 'A Wings-varázslóhoz előbb frissíts a 8-as menüvel.'
     source "$INSTALL_DIR/deploy/install/all-in-one.sh"
     all_in_one_wings
@@ -85,6 +102,7 @@ restart_services() {
 
 diagnose_install() {
     existing
+    prepare_wings_path
     local mode url
     mode=$(backend)
     url=$(sed -n 's/^APP_URL=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
@@ -114,6 +132,7 @@ diagnose_install() {
 
 configure_tunnel() {
     existing
+    prepare_wings_path
     local hostname env_file="$INSTALL_DIR/deploy/.env"
     read -r -p 'Cloudflare Tunnel hostname (pl. panel.example.hu): ' hostname
     valid_domain "$hostname" || die 'Érvénytelen Cloudflare hostname.'
@@ -250,11 +269,12 @@ remove_wings_resources() {
         fi
         docker image rm alex-wings:local alex-wings-builder >/dev/null 2>&1 || true
     fi
-    rm -rf -- /etc/pterodactyl /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
+    rm -rf -- "$INSTALL_DIR/deploy/wings" /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
 }
 
 remove_wings_only() {
     existing
+    prepare_wings_path
     [[ -f $INSTALL_DIR/deploy/state/local-wings-owned ]] || die 'A telepítő által kezelt helyi Wings nincs telepítve.'
     confirm 'A Wings konfigurációja, játék-konténerei és adatai is törlődnek. Folytatod?' || return 0
     local mode
@@ -292,6 +312,7 @@ refresh_source() {
 
 repair_install() {
     existing
+    prepare_wings_path
     confirm 'Készítsek mentést, majd töltsem le a javított forrást és frissítsem a panelt?' || return 0
     backup_panel
     refresh_source
@@ -300,6 +321,7 @@ repair_install() {
 
 restore_panel_backup() {
     existing
+    prepare_wings_path
     local backup mode
     read -r -p "Mentés könyvtára [$INSTALL_DIR/deploy/backups]: " backup
     backup=${backup:-$INSTALL_DIR/deploy/backups}
@@ -378,7 +400,7 @@ new_install() {
     {
         printf 'APP_URL=%s\nAPP_KEY=base64:%s\nHASHIDS_SALT=%s\n' "$app_url" "$(openssl rand -base64 32)" "$(openssl rand -hex 24)"
         printf 'DB_PASSWORD=%s\nDB_ROOT_PASSWORD=%s\n' "$(openssl rand -hex 32)" "$(openssl rand -hex 32)"
-        printf 'APP_TIMEZONE=Europe/Budapest\nPANEL_BIND_IP=%s\nPANEL_PORT=8080\nPANEL_BACKEND=%s\n' "$bind_ip" "$INSTALL_BACKEND"
+        printf 'APP_TIMEZONE=Europe/Budapest\nPANEL_BIND_IP=%s\nPANEL_PORT=8080\nPANEL_BACKEND=%s\nWINGS_CONFIG_DIR=%s/deploy/wings\n' "$bind_ip" "$INSTALL_BACKEND" "$INSTALL_DIR"
         printf 'TLS_ENABLED=%s\nPANEL_DOMAIN=%s\nACME_EMAIL=%s\nMAIL_MAILER=log\n' "$tls" "$domain" "$email"
     } > "$INSTALL_DIR/deploy/.env"
     chmod 0600 "$INSTALL_DIR/deploy/.env"
@@ -389,6 +411,7 @@ new_install() {
 
 initialize_panel() {
     existing
+    prepare_wings_path
     if [[ $(backend) == native ]]; then load_native; native_initialize; return; fi
     validate_source "$INSTALL_DIR"
     local was_installed=false
@@ -417,11 +440,14 @@ initialize_panel() {
 setup_wings() {
     existing
     if [[ $(backend) == native ]]; then install_local_wings; return; fi
-    [[ -f /etc/pterodactyl/config.yml ]] || die 'Előbb készíts node-ot a panel adminfelületén, majd mentsd a node konfigurációját az /etc/pterodactyl/config.yml fájlba. Részletek: DOCKER-HU.md.'
+    local wings_config_dir
+    wings_config_dir=$(sed -n 's/^WINGS_CONFIG_DIR=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
+    [[ -n $wings_config_dir ]] || wings_config_dir="$INSTALL_DIR/deploy/wings"
+    [[ -f $wings_config_dir/config.yml ]] || die "Előbb készíts node-ot a panel adminfelületén; a konfiguráció helye: $wings_config_dir/config.yml."
     printf 'A Wings a host Docker socketjét és azonos host-adatútvonalakat kapja. A panel belső node-címe: host.docker.internal:8081 (HTTP).\n'
     printf 'A config api.port legyen 8081; az api.host a Docker bridge belső címe, ne 127.0.0.1.\n'
     confirm 'Indítsam a Wings konténert a meglévő konfigurációval?' || return 0
-    mkdir -p "$INSTALL_DIR/deploy/state" /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
+    mkdir -p "$INSTALL_DIR/deploy/state" "$wings_config_dir" /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
     touch "$INSTALL_DIR/deploy/state/wings.enabled"
     compose build wings
     compose up -d wings

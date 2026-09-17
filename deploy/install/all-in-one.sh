@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
 
 all_in_one_wings() {
-    local ip port memory disk host gateway subnet mode candidate container binary
+    local ip port memory disk host panel_host panel_url gateway subnet mode candidate container binary
     mode=$(backend)
     [[ -f $INSTALL_DIR/deploy/state/installed ]] || die 'Előbb fejezd be a panel telepítését a 8-as menüvel.'
-    if [[ -f /etc/pterodactyl/config.yml && ! -f $INSTALL_DIR/deploy/state/local-wings-owned ]]; then
-        die 'Meglévő Wings-konfiguráció található. Nem írom felül. A saját node-ot a panel adminfelületén kezeld.'
+    local existing_wings_config
+    existing_wings_config=$(sed -n 's/^WINGS_CONFIG_DIR=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
+    [[ -n $existing_wings_config ]] || existing_wings_config="$INSTALL_DIR/deploy/wings"
+    if [[ -f $existing_wings_config/config.yml && ! -f $INSTALL_DIR/deploy/state/local-wings-owned ]]; then
+        die "Meglévő Wings-konfiguráció található: $existing_wings_config/config.yml. Nem írom felül."
     fi
     read -r -p 'Játékszerver nyilvános IPv4-címe: ' ip
     read -r -p 'Első játékport [25565]: ' port; port=${port:-25565}
@@ -21,21 +24,31 @@ all_in_one_wings() {
     [[ $(docker network inspect alex-games --format '{{index .Labels "alex-panel.managed"}}') == true ]] || die 'Az alex-games hálózat nem ehhez a telepítőhöz tartozik.'
     gateway=$(docker network inspect alex-games --format '{{(index .IPAM.Config 0).Gateway}}')
     subnet=$(docker network inspect alex-games --format '{{(index .IPAM.Config 0).Subnet}}')
-    host=127.0.0.1
-    if [[ $mode == docker ]]; then
+    panel_url=$(sed -n 's/^APP_URL=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
+    panel_host=${panel_url#*://}
+    panel_host=${panel_host%%/*}
+    panel_host=${panel_host%%:*}
+    host=$panel_host
+    if [[ $host == localhost || $host == 127.0.0.1 || ! $host =~ ^[0-9]+(\.[0-9]+){3}$ ]]; then
+        host=127.0.0.1
+    fi
+    if [[ $mode == docker && ($host == 127.0.0.1 || $host == localhost) ]]; then
         host=$(docker network inspect alex-panel_default --format '{{(index .IPAM.Config 0).Gateway}}')
     fi
-    mkdir -p /etc/pterodactyl /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
-    candidate=$(mktemp /etc/pterodactyl/alex-config.XXXXXX)
+    local wings_config_dir
+    wings_config_dir=$(sed -n 's/^WINGS_CONFIG_DIR=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
+    [[ -n $wings_config_dir ]] || wings_config_dir="$INSTALL_DIR/deploy/wings"
+    mkdir -p "$wings_config_dir" /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
+    candidate=$(mktemp "$wings_config_dir/alex-config.XXXXXX")
     # Never echo this file: it contains the Wings authentication token.
     if ! panel_artisan p:installer:node --host="$host" --ip="$ip" --port="$port" --memory="$memory" --disk="$disk" --gateway="$gateway" --subnet="$subnet" > "$candidate"; then
         rm -f "$candidate"
         die 'A node konfigurálása sikertelen. Ellenőrizd az IPv4-címet, a kereteket és a panel naplóját.'
     fi
     [[ -s $candidate ]] || die 'Üres Wings-konfiguráció.'
-    if [[ -f /etc/pterodactyl/config.yml ]]; then cp /etc/pterodactyl/config.yml /etc/pterodactyl/config.yml.previous; fi
+    if [[ -f $wings_config_dir/config.yml ]]; then cp "$wings_config_dir/config.yml" "$wings_config_dir/config.yml.previous"; fi
     chmod 600 "$candidate"
-    mv "$candidate" /etc/pterodactyl/config.yml
+    mv "$candidate" "$wings_config_dir/config.yml"
     touch "$INSTALL_DIR/deploy/state/local-wings-owned"
     if [[ $mode == docker ]]; then
         touch "$INSTALL_DIR/deploy/state/wings.enabled"
@@ -51,14 +64,14 @@ all_in_one_wings() {
         docker rm "$container" >/dev/null
         chmod 755 "$binary"
         mv -f "$binary" /usr/local/bin/alex-wings
-        cat > /etc/systemd/system/alex-wings.service <<'UNIT'
+        cat > /etc/systemd/system/alex-wings.service <<UNIT
 [Unit]
 Description=Alex Wings game-server daemon
 After=docker.service network-online.target
 Requires=docker.service
 [Service]
-WorkingDirectory=/etc/pterodactyl
-ExecStart=/usr/local/bin/alex-wings --config /etc/pterodactyl/config.yml
+WorkingDirectory=$wings_config_dir
+ExecStart=/usr/local/bin/alex-wings --config $wings_config_dir/config.yml
 Restart=on-failure
 RestartSec=5
 LimitNOFILE=4096

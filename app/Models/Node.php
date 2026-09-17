@@ -159,6 +159,13 @@ class Node extends Model implements Identifiable
      */
     public function getConfiguration(): array
     {
+        $sslEnabled = !$this->behind_proxy && $this->scheme === 'https';
+        $ssl = ['enabled' => $sslEnabled];
+        if ($sslEnabled) {
+            $ssl['cert'] = '/etc/letsencrypt/live/' . Str::lower($this->fqdn) . '/fullchain.pem';
+            $ssl['key'] = '/etc/letsencrypt/live/' . Str::lower($this->fqdn) . '/privkey.pem';
+        }
+
         return [
             'debug' => false,
             'uuid' => $this->uuid,
@@ -167,11 +174,7 @@ class Node extends Model implements Identifiable
             'api' => [
                 'host' => '0.0.0.0',
                 'port' => $this->daemonListen,
-                'ssl' => [
-                    'enabled' => (!$this->behind_proxy && $this->scheme === 'https'),
-                    'cert' => '/etc/letsencrypt/live/' . Str::lower($this->fqdn) . '/fullchain.pem',
-                    'key' => '/etc/letsencrypt/live/' . Str::lower($this->fqdn) . '/privkey.pem',
-                ],
+                'ssl' => $ssl,
                 'upload_limit' => $this->upload_size,
             ],
             'system' => [
