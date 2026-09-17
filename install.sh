@@ -155,7 +155,8 @@ remove_existing_install() {
         done
         rm -f /etc/systemd/system/alex-wings.service /etc/systemd/system/alex-panel-queue.service \
             /etc/systemd/system/alex-panel-scheduler.service /etc/systemd/system/alex-panel-gateway.service \
-            /etc/systemd/system/alex-panel-gateway.timer /usr/local/bin/alex-wings /usr/local/sbin/alex-panel-gateway
+            /etc/systemd/system/alex-panel-gateway.timer /usr/local/bin/alex-wings /usr/local/sbin/alex-panel-gateway \
+            /etc/pterodactyl/config.yml /etc/pterodactyl/config.yml.previous
         rm -f /etc/nginx/sites-enabled/alex-panel.conf /etc/nginx/sites-available/alex-panel.conf
         if command -v mariadb >/dev/null 2>&1; then
             mariadb -e "DROP DATABASE IF EXISTS alex_panel; DROP USER IF EXISTS 'alex_panel'@'localhost';" || true
