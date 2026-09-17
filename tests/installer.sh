@@ -39,7 +39,7 @@ printf 'PASS: %s installer validation/compose selection checks (no installation 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 validate_source "$repo_root"
 [[ $PANEL_REF == 1.0-develop ]] || die 'Default branch must exist in the fork'
-for file in artisan composer.json composer.lock bootstrap/app.php compose.yaml deploy/docker/Dockerfile deploy/docker/entrypoint.sh; do
+for file in artisan composer.json composer.lock bootstrap/app.php config/app.php compose.yaml deploy/docker/Dockerfile deploy/docker/entrypoint.sh; do
     mkdir -p "$INSTALL_DIR/$(dirname "$file")"
     printf 'fixture\n' > "$INSTALL_DIR/$file"
 done
@@ -74,7 +74,7 @@ printf 'PASS: source/image guards, first installation, repair ordering and crede
 # Real Git fixture: download and refresh without depending on a public GitHub branch.
 fixture=$(mktemp -d "${TMPDIR:-/tmp}/alex-git-fixture.XXXXXX")
 command git -C "$fixture" init --quiet -b 1.0-develop
-for file in artisan composer.json composer.lock bootstrap/app.php compose.yaml deploy/docker/Dockerfile deploy/docker/entrypoint.sh; do
+for file in artisan composer.json composer.lock bootstrap/app.php config/app.php compose.yaml deploy/docker/Dockerfile deploy/docker/entrypoint.sh; do
     mkdir -p "$fixture/$(dirname "$file")"
     printf 'fixture\n' > "$fixture/$file"
 done
@@ -116,7 +116,10 @@ repair_marker="$(dirname "$INSTALL_DIR")/repair-called-$RANDOM"
 confirm() { return 0; }
 remove_existing_install() { touch "$repair_marker"; rm -rf -- "$INSTALL_DIR"; }
 install_dependencies() { :; }
-fetch_source() { mkdir -p "$INSTALL_DIR"; }
+fetch_source() {
+    mkdir -p "$INSTALL_DIR/config"
+    printf "<?php\nreturn ['version' => 'test'];\n" > "$INSTALL_DIR/config/app.php"
+}
 initialize_panel() { :; }
 INSTALL_COMPONENTS=panel
 new_install false

@@ -75,6 +75,11 @@
                                 <i class="fa fa-home"></i> <span>Overview</span>
                             </a>
                         </li>
+                        <li class="{{ Route::currentRouteName() !== 'admin.system-status' ?: 'active' }}">
+                            <a href="{{ route('admin.system-status') }}">
+                                <i class="fa fa-heartbeat"></i> <span>System Status</span>
+                            </a>
+                        </li>
                         <li class="{{ ! starts_with(Route::currentRouteName(), 'admin.settings') ?: 'active' }}">
                             <a href="{{ route('admin.settings')}}">
                                 <i class="fa fa-wrench"></i> <span>Settings</span>

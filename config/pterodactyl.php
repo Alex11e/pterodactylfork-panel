@@ -13,6 +13,12 @@ return [
 
     'load_environment_only' => (bool) env('APP_ENVIRONMENT_ONLY', false),
 
+    'deployment' => [
+        'backend' => env('PANEL_BACKEND', 'unknown'),
+        'bind_ip' => env('PANEL_BIND_IP', 'unknown'),
+        'tunnel_hostname' => env('CLOUDFLARE_TUNNEL_HOSTNAME', ''),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Service Author
