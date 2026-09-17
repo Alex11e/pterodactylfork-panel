@@ -21,5 +21,7 @@ A build figyelmeztetett a régi Browserslist-adatokra és a Tailwind line-clamp
 pluginre; a tesztfuttató a meglévő TypeScript/ts-jest verziópárosra. Ezek nem
 akadályozták a fenti ellenőrzések sikeres lefutását.
 
-A kód helyi Git-commitokban van; a nyilvános GitHub-repóba nincs feltöltve.
-Az egyparancsos internetes telepítő URL-je csak a branch közzététele után működik.
+A fenti eredmények a szeptember 16-i ellenőrzésre vonatkoznak.
+A telepítő későbbi javításához külön, valódi Docker-telepítést futtató CI készült:
+[Installer Docker smoke test](https://github.com/Alex11e/pterodactylfork-panel/actions/workflows/installer.yaml).
+Az adott commit ellenőrzési eredményét mindig a hozzá tartozó futás mutatja.

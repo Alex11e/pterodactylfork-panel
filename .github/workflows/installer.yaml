@@ -1,0 +1,26 @@
+name: Installer Docker smoke test
+on:
+  push:
+    branches: [1.0-develop]
+    paths: ['install.sh', 'deploy/**', 'compose*.yaml', 'tests/*install*', '.github/workflows/installer.yaml', 'composer.*', '.dockerignore', '.gitattributes']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer regressions
+        run: bash tests/installer.sh
+      - name: Real Docker installation and restart
+        run: bash tests/docker-install.sh
+      - name: Diagnostics
+        if: failure()
+        run: |
+          docker compose --env-file deploy/.env -f compose.yaml ps -a || true
+          docker compose --env-file deploy/.env -f compose.yaml logs --tail=100 || true
+      - name: Remove test containers
+        if: always()
+        run: docker compose --env-file deploy/.env -f compose.yaml down --volumes || true

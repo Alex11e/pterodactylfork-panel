@@ -4,7 +4,7 @@ set -Eeuo pipefail
 umask 077
 INSTALL_DIR=${INSTALL_DIR:-/opt/alex-panel}
 PANEL_REPOSITORY=${PANEL_REPOSITORY:-https://github.com/Alex11e/pterodactylfork-panel.git}
-PANEL_REF=${PANEL_REF:-feature/puffer-docker-hu}
+PANEL_REF=${PANEL_REF:-1.0-develop}
 
 die() { printf '\nHIBA: %s\n' "$*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die 'Root jogosultság kell. Előbb: sudo -i'; }
@@ -27,6 +27,18 @@ compose() {
     docker compose "${args[@]}" "$@"
 }
 existing() { [[ -f $INSTALL_DIR/deploy/.env ]] || die "Nincs telepítés itt: $INSTALL_DIR"; }
+
+validate_source() {
+    local root=$1 file
+    for file in artisan composer.json composer.lock bootstrap/app.php compose.yaml deploy/docker/Dockerfile deploy/docker/entrypoint.sh; do
+        [[ -s $root/$file ]] || die "Hiányos panel-forrás: $root/$file. A 8-as menüponttal töltsd le újra a javított forrást."
+    done
+}
+
+validate_repository() {
+    [[ $PANEL_REPOSITORY == https://github.com/* && $PANEL_REPOSITORY != *$'\n'* ]] || die 'HTTPS GitHub-repó szükséges.'
+    [[ -n $PANEL_REF && $PANEL_REF != -* && $PANEL_REF != *$'\n'* ]] || die 'Érvénytelen PANEL_REF.'
+}
 
 install_dependencies() {
     # OS metadata is owned by the operating system, never fetched from the network.
@@ -52,11 +64,37 @@ install_dependencies() {
 fetch_source() {
     valid_directory "$INSTALL_DIR" || die 'Érvénytelen telepítési könyvtár.'
     [[ ! -e $INSTALL_DIR ]] || die 'A célkönyvtár már létezik. A telepítő nem írja felül; adj meg új INSTALL_DIR értéket vagy használd a meglévő telepítés menüjét.'
-    [[ $PANEL_REPOSITORY == https://github.com/* && $PANEL_REPOSITORY != *$'\n'* ]] || die 'HTTPS GitHub-repó szükséges.'
-    git clone --no-checkout --filter=blob:none "$PANEL_REPOSITORY" "$INSTALL_DIR"
+    validate_repository
+    # Stage beside the destination. Failed downloads never leave a broken INSTALL_DIR.
+    local staging
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    staging=$(mktemp -d "${INSTALL_DIR}.download.XXXXXX")
+    git -C "$staging" init --quiet
+    git -C "$staging" remote add origin "$PANEL_REPOSITORY"
+    git -C "$staging" fetch --depth 1 origin "$PANEL_REF"
+    git -C "$staging" checkout --detach FETCH_HEAD
+    validate_source "$staging"
+    mv -T "$staging" "$INSTALL_DIR"
+}
+
+refresh_source() {
+    existing
+    validate_repository
+    [[ -d $INSTALL_DIR/.git ]] || die 'A javításhoz Gitből telepített panel kell.'
+    [[ $(git -C "$INSTALL_DIR" remote get-url origin) == "$PANEL_REPOSITORY" ]] || die 'A telepítés forrásrepója eltér. Állítsd be a megfelelő PANEL_REPOSITORY értéket.'
+    git -C "$INSTALL_DIR" diff --quiet || die 'Helyileg módosított forrásfájlok vannak. Mentsd/commitold őket a frissítés előtt.'
+    git -C "$INSTALL_DIR" diff --cached --quiet || die 'Commitra váró módosítások vannak.'
+    # Credentials, application key and named volumes stay in place.
     git -C "$INSTALL_DIR" fetch --depth 1 origin "$PANEL_REF"
     git -C "$INSTALL_DIR" checkout --detach FETCH_HEAD
-    [[ -f $INSTALL_DIR/compose.yaml && -f $INSTALL_DIR/deploy/docker/Dockerfile ]] || die 'A kiválasztott Git-ref nem tartalmazza az Alex Panel Docker-csomagot.'
+    validate_source "$INSTALL_DIR"
+}
+
+repair_install() {
+    existing
+    confirm 'Letöltsem a javított forrást, újraépítsem a panelt és folytassam a telepítést a meglévő adatokkal?' || return 0
+    refresh_source
+    initialize_panel repair
 }
 
 new_install() {
@@ -91,14 +129,28 @@ new_install() {
 
 initialize_panel() {
     existing
-    [[ ! -f $INSTALL_DIR/deploy/state/installed ]] || die 'Ez a telepítés már inicializált. Az adminfiókhoz a 6-os menüt használd.'
+    validate_source "$INSTALL_DIR"
+    local was_installed=false
+    [[ ! -f $INSTALL_DIR/deploy/state/installed ]] || was_installed=true
+    [[ $was_installed == false || ${1:-} == repair ]] || die 'Ez a telepítés már inicializált. Javításhoz a 8-as, adminfiókhoz a 6-os menüt használd.'
+    mkdir -p "$INSTALL_DIR/deploy/state"
+    compose config --quiet
     compose build panel
+    # Verify the actual image before starting migrations; bypass the app entrypoint.
+    compose run --rm --no-deps --entrypoint /bin/sh panel -ec 'test -s /app/artisan && test -s /app/vendor/autoload.php && test -s /app/public/assets/manifest.json' || die 'Hiányos Docker image: artisan/vendor/frontend. A build naplóját ellenőrizd.'
     compose up -d --wait database redis
-    compose run --rm panel php artisan migrate --seed --force
+    compose run --rm --workdir /app panel php /app/artisan migrate --force
+    if [[ $was_installed == false && ! -f $INSTALL_DIR/deploy/state/seeded ]]; then
+        compose run --rm --workdir /app panel php /app/artisan db:seed --force
+        touch "$INSTALL_DIR/deploy/state/seeded"
+    fi
     compose up -d --wait --wait-timeout 180
     touch "$INSTALL_DIR/deploy/state/installed"
-    printf '\nAdminisztrátori fiók létrehozása (a jelszó nem kerül parancssori argumentumba):\n'
-    compose exec panel php artisan p:user:make --admin=1
+    if [[ $was_installed == false ]]; then
+        printf '\nAdminisztrátori fiók létrehozása (a jelszó nem kerül parancssori argumentumba):\n'
+        compose exec --workdir /app panel php /app/artisan p:user:make --admin=1
+    fi
+    printf '\nA panel ellenőrzött konténere elindult. Adminfiók létrehozásához később a 6-os menüt használd.\n'
 }
 
 setup_wings() {
@@ -135,7 +187,7 @@ main() {
     esac
     need_root
     valid_directory "$INSTALL_DIR" || die 'Érvénytelen INSTALL_DIR.'
-    printf '\nAlex Panel – magyar konzol, PufferPanel-szerű proxy és Docker\n\n1) Új panel HTTPS-sel\n2) Új panel helyi HTTP teszthez\n3) Wings konténer beállítása\n4) Panel adatbázis + storage mentése\n5) Állapot és naplók\n6) Admin felhasználó létrehozása\n7) Szolgáltatások újraindítása\n8) Megszakadt új telepítés folytatása\n0) Kilépés\n'
+    printf '\nAlex Panel – magyar konzol, PufferPanel-szerű proxy és Docker\n\n1) Új panel HTTPS-sel\n2) Új panel helyi HTTP teszthez\n3) Wings konténer beállítása\n4) Panel adatbázis + storage mentése\n5) Állapot és naplók\n6) Admin felhasználó létrehozása\n7) Szolgáltatások újraindítása\n8) Javított forrás letöltése és telepítés javítása/folytatása\n0) Kilépés\n'
     local choice
     read -r -p 'Választás: ' choice
     case $choice in
@@ -144,9 +196,9 @@ main() {
         3) setup_wings ;;
         4) backup_panel ;;
         5) existing; compose ps; compose logs --tail=40 panel ;;
-        6) existing; compose exec panel php artisan p:user:make --admin=1 ;;
+        6) existing; compose exec --workdir /app panel php /app/artisan p:user:make --admin=1 ;;
         7) existing; compose restart ;;
-        8) initialize_panel ;;
+        8) repair_install ;;
         0) return ;;
         *) die 'Érvénytelen menüpont.' ;;
     esac

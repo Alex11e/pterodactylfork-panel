@@ -27,6 +27,7 @@ services:
       timeout: 3s
       retries: 20
   panel:
+    working_dir: /app
     build:
       context: .
       dockerfile: deploy/docker/Dockerfile

@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --non-interactive
 COPY . .
+RUN test -s /app/artisan && test -s /app/composer.json
 RUN yarn build:production
 
 FROM composer:2 AS composer
@@ -14,7 +15,8 @@ RUN apk add --no-cache nginx supervisor su-exec curl ca-certificates mariadb-cli
 COPY --from=composer /usr/bin/composer /usr/local/bin/composer
 COPY . .
 COPY --from=frontend /app/public/assets ./public/assets
-RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts \
+RUN test -s /app/artisan && test -s /app/public/assets/manifest.json \
+    && composer install --working-dir=/app --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts \
     && composer check-platform-reqs --no-dev \
     && mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache /etc/nginx/gateway /run/nginx \
     && chown -R www-data:www-data storage bootstrap/cache \

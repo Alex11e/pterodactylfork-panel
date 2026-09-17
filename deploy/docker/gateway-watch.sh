@@ -3,7 +3,7 @@ set -eu
 cd /app
 while sleep 30; do
     candidate=$(mktemp /etc/nginx/gateway/.candidate.XXXXXX)
-    if ! php artisan p:remote-access:nginx --no-ansi > "$candidate"; then
+    if ! php /app/artisan p:remote-access:nginx --no-ansi > "$candidate"; then
         rm -f "$candidate"
         echo 'Gateway refresh failed; keeping the previous configuration.' >&2
         continue

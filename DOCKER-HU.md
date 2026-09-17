@@ -3,20 +3,34 @@
 ## Gyors telepítő
 
 Csak ellenőrzött, saját kiadású URL-ről futtasd a telepítőt. Az aktuális repóban
-a script az `install.sh` fájl. GitHubra feltöltött branch esetén:
+a script az `install.sh` fájl. Rootként Ubuntu/Debian szerveren:
 
 ```bash
-bash <(curl -fsSL --proto '=https' https://raw.githubusercontent.com/Alex11e/pterodactylfork-panel/feature/puffer-docker-hu/install.sh)
+bash <(curl -fsSL --proto '=https' https://raw.githubusercontent.com/Alex11e/pterodactylfork-panel/1.0-develop/install.sh)
 ```
 
-Amíg a branch nincs feltöltve, az egyparancsos távoli telepítés még nem használható:
-a script is ebből a branchből tölti le a forrást. A helyi ZIP-forráshoz kövesd
-az alábbi kézi Docker indítást. A telepítő nem töröl meglévő
+A telepítő alapból az `1.0-develop` ágat tölti le. Ha korábban más `PANEL_REF`
+változót exportáltál, előtte futtasd: `unset PANEL_REF`.
+A helyi ZIP-forráshoz kövesd az alábbi kézi Docker indítást. A telepítő nem töröl meglévő
 Docker-csomagot, adatbázist, kötetet vagy célkönyvtárat. Root Debian/Ubuntu
 rendszeren fut. A script a Docker hivatalos apt-tárolóját használja, és nem futtat
 ismeretlen, távoli shell-kódot.
 
 ## Menüpontok
+
+Megszakadt telepítésnél válaszd a **8-as menüpontot**. Ez a meglévő
+`/opt/alex-panel` könyvtárban letölti a javított forrást, újraépíti az image-et,
+ellenőrzi az `/app/artisan`, a Composer autoloader és a frontend jelenlétét,
+majd folytatja az adatbázis-migrációt és az indítást. Az APP_KEY, a jelszavak és
+a Docker-adatkötetek megmaradnak. Már inicializált panelnél nem fut újra a
+kezdeti adatfeltöltés és nem hoz létre újabb adminfiókot. Éles panel javítása
+előtt készíts mentést. A helyileg módosított forrásfájlokat nem írja felül.
+Ha az adminfiók létrehozásánál szakadt meg a folyamat, a **6-os menüpontot** használd.
+
+Ha a letöltés még a `deploy/.env` létrehozása előtt szakadt meg, a 8-as mód nem
+használható. A régi, félbemaradt könyvtárat őrizd meg más néven, majd válaszd az
+1-es vagy 2-es módot. Az új telepítő már külön ideiglenes könyvtárba tölt le,
+és csak ellenőrzött, teljes forrás esetén hozza létre a végleges célkönyvtárat.
 
 Az 1-es mód HTTPS-es panelt telepít Caddyvel. A DNS-rekordnak a gépre kell
 mutatnia, a 80/443 portnak elérhetőnek kell lennie, és valódi e-mail-címet kell
