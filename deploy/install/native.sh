@@ -118,6 +118,12 @@ server {
 NGINX
     fi
     chmod 644 /etc/nginx/sites-available/alex-panel.conf
+    # Debian/Ubuntu ship a catch-all default vhost which can mask the panel
+    # redirect when the requested hostname is not in public DNS yet. Disable
+    # only that package-owned symlink; the original file remains available.
+    if [[ -L /etc/nginx/sites-enabled/default ]] && [[ $(readlink -f /etc/nginx/sites-enabled/default) == /etc/nginx/sites-available/default ]]; then
+        rm -f /etc/nginx/sites-enabled/default
+    fi
     ln -sfn /etc/nginx/sites-available/alex-panel.conf /etc/nginx/sites-enabled/alex-panel.conf
     nginx -t
     systemctl enable --now nginx

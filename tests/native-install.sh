@@ -40,7 +40,7 @@ cp deploy/.env "$saved_env"
 sed -i 's/^TLS_ENABLED=false/TLS_ENABLED=true/' deploy/.env
 printf 'PANEL_DOMAIN=%s\n' "$domain" >> deploy/.env
 native_nginx_config
-http_status=$(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' --resolve "$domain:80:127.0.0.1" "http://$domain/auth/login" || true)
+http_status=$(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' -H "Host: $domain" http://127.0.0.1/auth/login || true)
 printf 'TLS HTTP redirect status: %s\n' "$http_status"
 [[ $http_status == 301 ]] || { nginx -T; exit 1; }
 curl --noproxy '*' -fsS --cacert "/etc/letsencrypt/live/$domain/fullchain.pem" --resolve "$domain:443:127.0.0.1" "https://$domain/auth/login" -o /dev/null
