@@ -29,7 +29,11 @@ compose() {
     docker compose "${args[@]}" "$@"
 }
 existing() { [[ -f $INSTALL_DIR/deploy/.env ]] || die "Nincs telepítés itt: $INSTALL_DIR"; }
-backend() { if [[ -f $INSTALL_DIR/deploy/state/backend ]]; then cat "$INSTALL_DIR/deploy/state/backend"; else printf docker; fi; }
+backend() {
+    local mode=docker
+    if [[ -f $INSTALL_DIR/deploy/state/backend ]]; then mode=$(cat "$INSTALL_DIR/deploy/state/backend"); fi
+    case $mode in native|docker) printf '%s' "$mode" ;; *) die 'Érvénytelen mentett futtatási mód.' ;; esac
+}
 load_native() { source "$INSTALL_DIR/deploy/install/native.sh"; }
 panel_artisan() {
     if [[ $(backend) == native ]]; then load_native; native_artisan "$@";
@@ -248,7 +252,7 @@ main() {
     esac
     need_root
     valid_directory "$INSTALL_DIR" || die 'Érvénytelen INSTALL_DIR.'
-    printf '\nAlex Panel – magyar konzol, PufferPanel-szerű proxy és Docker\n\n1) Új panel HTTPS-sel\n2) Új panel helyi HTTP teszthez\n3) Wings konténer beállítása\n4) Panel adatbázis + storage mentése\n5) Állapot és naplók\n6) Admin felhasználó létrehozása\n7) Szolgáltatások újraindítása\n8) Javított forrás letöltése és telepítés javítása/folytatása\n0) Kilépés\n'
+    printf '\nAlex Panel – magyar konzol, PufferPanel-szerű proxy és Docker\n\n1) Új panel HTTPS-sel\n2) Új panel helyi HTTP teszthez\n3) Helyi Wings automatikus beállítása\n4) Panel adatbázis + storage mentése\n5) Állapot és naplók\n6) Admin felhasználó létrehozása\n7) Szolgáltatások újraindítása\n8) Javított forrás letöltése és telepítés javítása/folytatása\n0) Kilépés\n'
     local choice
     read -r -p 'Választás: ' choice
     case $choice in

@@ -29,6 +29,23 @@ before=$(sha256sum deploy/.env)
 native_initialize
 [[ $(sha256sum deploy/.env) == "$before" ]]
 echo 'PASS: native Nginx/PHP-FPM/MariaDB/Redis install, HTTP login and preserved credentials on repeat.'
+
+# Exercise the TLS nginx template without contacting a public certificate authority.
+domain=alex-panel-ci.example.com
+mkdir -p "/etc/letsencrypt/live/$domain"
+openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=$domain" -addext "subjectAltName=DNS:$domain" \
+    -keyout "/etc/letsencrypt/live/$domain/privkey.pem" -out "/etc/letsencrypt/live/$domain/fullchain.pem" >/dev/null 2>&1
+saved_env=$(mktemp)
+cp deploy/.env "$saved_env"
+sed -i 's/^TLS_ENABLED=false/TLS_ENABLED=true/' deploy/.env
+printf 'PANEL_DOMAIN=%s\n' "$domain" >> deploy/.env
+native_nginx_config
+[[ $(curl -s -o /dev/null -w '%{http_code}' --resolve "$domain:80:127.0.0.1" "http://$domain/auth/login") == 301 ]]
+curl -fsS --cacert "/etc/letsencrypt/live/$domain/fullchain.pem" --resolve "$domain:443:127.0.0.1" "https://$domain/auth/login" -o /dev/null
+cp "$saved_env" deploy/.env
+rm -f "$saved_env"
+native_nginx_config
+echo 'PASS: native HTTPS vhost and HTTP redirect with a local test certificate.'
 source deploy/install/all-in-one.sh
 install_dependencies() { docker info >/dev/null; }
 all_in_one_wings <<'INPUT'

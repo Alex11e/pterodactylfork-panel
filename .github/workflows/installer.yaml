@@ -15,15 +15,15 @@ jobs:
       - name: Installer regressions
         run: bash tests/installer.sh
       - name: Real Docker installation and restart
-        run: bash tests/docker-install.sh
+        run: sudo bash tests/docker-install.sh
       - name: Diagnostics
         if: failure()
         run: |
-          docker compose --env-file deploy/.env -f compose.yaml ps -a || true
-          docker compose --env-file deploy/.env -f compose.yaml logs --tail=100 || true
+          sudo docker compose --env-file deploy/.env -f compose.yaml ps -a || true
+          sudo docker compose --env-file deploy/.env -f compose.yaml logs --tail=100 || true
       - name: Remove test containers
         if: always()
-        run: docker compose --env-file deploy/.env -f compose.yaml -f compose.wings.yaml down --volumes || true
+        run: sudo docker compose --env-file deploy/.env -f compose.yaml -f compose.wings.yaml down --volumes || true
   native:
     runs-on: ubuntu-24.04
     timeout-minutes: 30

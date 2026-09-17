@@ -72,7 +72,8 @@ native_nginx_config() {
         valid_domain "$domain" || die 'Érvénytelen panel domain a mentett konfigurációban.'
         listen=80
         if [[ -f /etc/letsencrypt/live/$domain/fullchain.pem ]]; then
-            cert="listen 443 ssl; ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem; ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;"
+            listen='443 ssl'
+            cert="ssl_certificate /etc/letsencrypt/live/$domain/fullchain.pem; ssl_certificate_key /etc/letsencrypt/live/$domain/privkey.pem;"
         fi
     else domain=localhost; fi
     mkdir -p /etc/nginx/alex-panel
@@ -99,6 +100,17 @@ server {
     location ~ /\\.(?!well-known) { deny all; }
 }
 NGINX
+    if [[ -n $cert ]]; then
+        cat >> /etc/nginx/sites-available/alex-panel.conf <<NGINX
+server {
+    listen 80;
+    server_name $domain;
+    root $INSTALL_DIR/public;
+    location ^~ /.well-known/acme-challenge/ { try_files \$uri =404; }
+    location / { return 301 https://$domain\$request_uri; }
+}
+NGINX
+    fi
     chmod 644 /etc/nginx/sites-available/alex-panel.conf
     ln -sfn /etc/nginx/sites-available/alex-panel.conf /etc/nginx/sites-enabled/alex-panel.conf
     nginx -t
