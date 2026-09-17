@@ -116,7 +116,15 @@ install_dependencies() {
 
 fetch_source() {
     valid_directory "$INSTALL_DIR" || die 'Érvénytelen telepítési könyvtár.'
-    [[ ! -e $INSTALL_DIR ]] || die 'A célkönyvtár már létezik. A telepítő nem írja felül; adj meg új INSTALL_DIR értéket vagy használd a meglévő telepítés menüjét.'
+    if [[ -e $INSTALL_DIR ]]; then
+        if [[ -f $INSTALL_DIR/deploy/.env ]]; then
+            die 'Már létező Alex Panel telepítés található. A telepítő újratelepítés helyett a javítási módot használja; válaszd a 8-as menüt.'
+        elif [[ -d $INSTALL_DIR/.git ]]; then
+            die 'Félbemaradt Git-forrás található. A 8-as menüponttal állítsd helyre, vagy adj meg új INSTALL_DIR értéket; a könyvtárat nem töröltem.'
+        else
+            die 'A célkönyvtár már létezik és nem azonosítható Alex Panel-forrásként. Adj meg új INSTALL_DIR értéket; a könyvtárat nem módosítottam.'
+        fi
+    fi
     validate_repository
     # Stage beside the destination. Failed downloads never leave a broken INSTALL_DIR.
     local staging
@@ -152,6 +160,15 @@ repair_install() {
 
 new_install() {
     local tls=$1 domain='' email='' app_url bind_ip=127.0.0.1
+    if [[ -f $INSTALL_DIR/deploy/.env ]]; then
+        printf '\nMeglévő Alex Panel telepítést találtam: %s\n' "$INSTALL_DIR"
+        printf 'A mentett futtatási mód (%s), kulcsok, adatbázis és kötetek megmaradnak. A forrást frissítem és javítási telepítést futtatok.\n' "$(backend)"
+        confirm 'Folytassam a meglévő telepítés javítását?' || return 0
+        refresh_source
+        initialize_panel repair
+        if [[ $INSTALL_COMPONENTS == all ]]; then install_local_wings; fi
+        return
+    fi
     if [[ $tls == true ]]; then
         read -r -p 'Panel domain (pl. panel.pelda.hu): ' domain
         valid_domain "$domain" || die 'Érvénytelen domain.'

@@ -106,3 +106,17 @@ printf 'local edit\n' > "$INSTALL_DIR/artisan"
 if (refresh_source) >/dev/null 2>&1; then die 'Local changes were overwritten'; fi
 grep -qx 'local edit' "$INSTALL_DIR/artisan"
 echo 'PASS: staged downloads, missing branch recovery, source refresh and local-edit protection'
+
+# Selecting a new-install menu on an existing installation now routes to repair
+# mode instead of attempting to overwrite the destination directory.
+INSTALL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/alex-existing-install.XXXXXX")
+mkdir -p "$INSTALL_DIR/deploy"
+printf 'APP_KEY=preserve-me\n' > "$INSTALL_DIR/deploy/.env"
+repair_marker="$INSTALL_DIR/repair-called"
+confirm() { return 0; }
+refresh_source() { touch "$repair_marker"; }
+initialize_panel() { [[ ${1:-} == repair ]] || die 'Existing install did not use repair mode'; }
+INSTALL_COMPONENTS=panel
+new_install false
+[[ -f $repair_marker ]] || die 'Existing install did not route to repair mode'
+echo 'PASS: existing installation is repaired from the new-install menu without overwrite'
