@@ -9,7 +9,7 @@ export const breakpoint: BreakpointFunction<Breakpoints> = createBreakpoint<Brea
     xl: 1280,
 });
 
-export const panelThemes = ['midnight', 'emerald', 'amethyst', 'sunset'] as const;
+export const panelThemes = ['midnight', 'emerald', 'amethyst', 'sunset', 'dracula', 'nord', 'ocean'] as const;
 export type PanelTheme = (typeof panelThemes)[number];
 
 export const panelThemeLabels: Record<PanelTheme, string> = {
@@ -17,4 +17,7 @@ export const panelThemeLabels: Record<PanelTheme, string> = {
     emerald: 'Emerald',
     amethyst: 'Amethyst',
     sunset: 'Sunset',
+    dracula: 'Dracula',
+    nord: 'Nord',
+    ocean: 'Ocean',
 };

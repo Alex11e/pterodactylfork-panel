@@ -29,6 +29,7 @@ export default () => {
     const [query, setQuery] = useState('');
     const [favorites, setFavorites] = usePersistedState<string[]>(`${uuid}:favorite_servers`, []);
     const [favoriteOnly, setFavoriteOnly] = useState(false);
+    const [compact, setCompact] = usePersistedState(`${uuid}:compact_dashboard`, false);
     const text = usePanelText();
     const favoriteIds = favorites ?? [];
 
@@ -95,6 +96,8 @@ export default () => {
                     </p>
                 )}
                 {rootAdmin && <Switch name={'show_all_servers'} defaultChecked={showOnlyAdmin} onChange={() => setShowOnlyAdmin((s) => !s)} />}
+                <span css={tw`uppercase text-xs text-neutral-400 ml-2`}>{text('Compact view')}</span>
+                <Switch name={'compact_dashboard'} defaultChecked={compact} onChange={() => setCompact((value) => !value)} />
             </div>
             {!servers ? (
                 <Spinner centered size={'large'} />
@@ -108,6 +111,7 @@ export default () => {
                                     server={server}
                                     isFavorite={favoriteIds.includes(server.uuid)}
                                     onToggleFavorite={() => toggleFavorite(server)}
+                                    compact={compact ?? false}
                                     css={index > 0 ? tw`mt-2` : undefined}
                                 />
                             ))

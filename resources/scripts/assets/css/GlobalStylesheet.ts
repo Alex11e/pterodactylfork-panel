@@ -58,6 +58,33 @@ export default createGlobalStyle`
         --panel-muted: #e8b9a5;
     }
 
+    body[data-panel-theme='dracula'] {
+        --panel-bg: #282a36;
+        --panel-surface: #21222c;
+        --panel-raised: #44475a;
+        --panel-input: #6272a4;
+        --panel-text: #f8f8f2;
+        --panel-muted: #bdc0d0;
+    }
+
+    body[data-panel-theme='nord'] {
+        --panel-bg: #2e3440;
+        --panel-surface: #3b4252;
+        --panel-raised: #434c5e;
+        --panel-input: #4c566a;
+        --panel-text: #eceff4;
+        --panel-muted: #b8c0ce;
+    }
+
+    body[data-panel-theme='ocean'] {
+        --panel-bg: #071923;
+        --panel-surface: #0b2533;
+        --panel-raised: #123b4d;
+        --panel-input: #1b5870;
+        --panel-text: #e6f7ff;
+        --panel-muted: #9cc8d9;
+    }
+
     body[data-panel-theme] .bg-neutral-900 { background-color: var(--panel-surface) !important; }
     body[data-panel-theme] .bg-neutral-800 { background-color: var(--panel-bg) !important; }
     body[data-panel-theme] .bg-neutral-700 { background-color: var(--panel-raised) !important; }

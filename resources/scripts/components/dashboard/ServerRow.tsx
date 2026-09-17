@@ -1,6 +1,15 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEthernet, faHdd, faMemory, faMicrochip, faServer, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
+import {
+    faCheck,
+    faCopy,
+    faEthernet,
+    faHdd,
+    faMemory,
+    faMicrochip,
+    faServer,
+    faStar as faStarSolid,
+} from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
 import { Server } from '@/api/server/getServer';
 import getServerResourceUsage, { ServerPowerState, ServerStats } from '@/api/server/getServerResourceUsage';
@@ -27,8 +36,11 @@ const IconDescription = styled.p<{ $alarm: boolean }>`
     ${(props) => (props.$alarm ? tw`text-white` : tw`text-neutral-400`)};
 `;
 
-const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | undefined }>`
+const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | undefined; $compact: boolean }>`
     ${tw`grid grid-cols-12 gap-4 relative`};
+
+    ${({ $compact }) => $compact && tw`py-2`};
+    ${({ $compact }) => $compact && `& [data-server-description] { display: none; }`};
 
     & .status-bar {
         ${tw`w-2 bg-red-500 absolute right-0 z-20 rounded-full m-1 opacity-50 transition-all duration-150`};
@@ -54,15 +66,35 @@ export default ({
     className,
     isFavorite = false,
     onToggleFavorite,
+    compact = false,
 }: {
     server: Server;
     className?: string;
     isFavorite?: boolean;
     onToggleFavorite?: () => void;
+    compact?: boolean;
 }) => {
     const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
     const [isSuspended, setIsSuspended] = useState(server.status === 'suspended');
     const [stats, setStats] = useState<ServerStats | null>(null);
+    const [copied, setCopied] = useState(false);
+    const primaryAllocation = server.allocations.find((allocation) => allocation.isDefault);
+    const serverAddress = primaryAllocation
+        ? `${primaryAllocation.alias || ip(primaryAllocation.ip)}:${primaryAllocation.port}`
+        : undefined;
+
+    const copyAddress = async (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!serverAddress || !navigator.clipboard) return;
+        try {
+            await navigator.clipboard.writeText(serverAddress);
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1500);
+        } catch {
+            setCopied(false);
+        }
+    };
 
     const getStats = () =>
         getServerResourceUsage(server.uuid)
@@ -99,7 +131,13 @@ export default ({
     const cpuLimit = server.limits.cpu !== 0 ? server.limits.cpu + ' %' : 'Unlimited';
 
     return (
-        <StatusIndicatorBox as={Link} to={`/server/${server.id}`} className={className} $status={stats?.status}>
+        <StatusIndicatorBox
+            as={Link}
+            to={`/server/${server.id}`}
+            className={className}
+            $status={stats?.status}
+            $compact={compact}
+        >
             {onToggleFavorite && (
                 <button
                     type={'button'}
@@ -123,7 +161,9 @@ export default ({
                 <div>
                     <p css={tw`text-lg break-words`}>{server.name}</p>
                     {!!server.description && (
-                        <p css={tw`text-sm text-neutral-300 break-words line-clamp-2`}>{server.description}</p>
+                        <p data-server-description css={tw`text-sm text-neutral-300 break-words line-clamp-2`}>
+                            {server.description}
+                        </p>
                     )}
                 </div>
             </div>
@@ -131,17 +171,25 @@ export default ({
                 <div css={tw`flex justify-center`}>
                     <FontAwesomeIcon icon={faEthernet} css={tw`text-neutral-500`} />
                     <p css={tw`text-sm text-neutral-400 ml-2`}>
-                        {server.allocations
-                            .filter((alloc) => alloc.isDefault)
-                            .map((allocation) => (
-                                <React.Fragment key={allocation.ip + allocation.port.toString()}>
-                                    {allocation.alias || ip(allocation.ip)}:{allocation.port}
-                                </React.Fragment>
-                            ))}
+                        {serverAddress}
                     </p>
+                    {serverAddress && (
+                        <button
+                            type={'button'}
+                            aria-label={copied ? 'Address copied' : 'Copy address'}
+                            title={copied ? 'Address copied' : 'Copy address'}
+                            onClick={copyAddress}
+                            css={tw`ml-2 text-neutral-400 hover:text-neutral-200`}
+                        >
+                            <FontAwesomeIcon icon={copied ? faCheck : faCopy} />
+                        </button>
+                    )}
                 </div>
             </div>
-            <div css={tw`hidden col-span-7 lg:col-span-4 sm:flex items-baseline justify-center`}>
+            <div
+                data-server-metrics
+                css={compact ? tw`hidden` : tw`hidden col-span-7 lg:col-span-4 sm:flex items-baseline justify-center`}
+            >
                 {!stats || isSuspended || server.isNodeUnderMaintenance ? (
                     isSuspended ? (
                         <div css={tw`flex-1 text-center`}>
