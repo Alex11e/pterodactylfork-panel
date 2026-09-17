@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 
 all_in_one_wings() {
-    local ip port memory disk host panel_host panel_url gateway subnet mode candidate container binary
+    local ip port memory disk host panel_host panel_url gateway subnet mode candidate container binary previous_config
     mode=$(backend)
     [[ -f $INSTALL_DIR/deploy/state/installed ]] || die 'Előbb fejezd be a panel telepítését a 8-as menüvel.'
     local existing_wings_config
     existing_wings_config=$(sed -n 's/^WINGS_CONFIG_DIR=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
     [[ -n $existing_wings_config ]] || existing_wings_config="$INSTALL_DIR/deploy/wings"
     if [[ -f $existing_wings_config/config.yml && ! -f $INSTALL_DIR/deploy/state/local-wings-owned ]]; then
-        die "Meglévő Wings-konfiguráció található: $existing_wings_config/config.yml. Nem írom felül."
+        case $existing_wings_config in
+            "$INSTALL_DIR"/deploy/*) ;;
+            *) die "Meglévő Wings-konfiguráció található: $existing_wings_config/config.yml. Nem írom felül." ;;
+        esac
     fi
     read -r -p 'Játékszerver nyilvános IPv4-címe: ' ip
     read -r -p 'Első játékport [25565]: ' port; port=${port:-25565}
@@ -39,6 +42,12 @@ all_in_one_wings() {
     wings_config_dir=$(sed -n 's/^WINGS_CONFIG_DIR=//p' "$INSTALL_DIR/deploy/.env" | tail -n 1)
     [[ -n $wings_config_dir ]] || wings_config_dir="$INSTALL_DIR/deploy/wings"
     mkdir -p "$wings_config_dir" /var/lib/pterodactyl /var/log/pterodactyl /tmp/pterodactyl
+    if [[ -f $existing_wings_config/config.yml ]]; then
+        printf 'A saját régi Wings konfigurációt törlöm és teljesen újraírom: %s/config.yml\n' "$existing_wings_config"
+        previous_config="$existing_wings_config/config.yml.previous"
+        cp "$existing_wings_config/config.yml" "$previous_config"
+        rm -f "$existing_wings_config/config.yml"
+    fi
     candidate=$(mktemp "$wings_config_dir/alex-config.XXXXXX")
     # Never echo this file: it contains the Wings authentication token.
     if ! panel_artisan p:installer:node --host="$host" --ip="$ip" --port="$port" --memory="$memory" --disk="$disk" --gateway="$gateway" --subnet="$subnet" > "$candidate"; then
@@ -46,9 +55,16 @@ all_in_one_wings() {
         die 'A node konfigurálása sikertelen. Ellenőrizd az IPv4-címet, a kereteket és a panel naplóját.'
     fi
     [[ -s $candidate ]] || die 'Üres Wings-konfiguráció.'
-    if [[ -f $wings_config_dir/config.yml ]]; then cp "$wings_config_dir/config.yml" "$wings_config_dir/config.yml.previous"; fi
+    for required in uuid token_id token api system remote; do
+        grep -q "^$required:" "$candidate" || {
+            rm -f "$candidate"
+            [[ -f ${previous_config:-} ]] && mv "$previous_config" "$wings_config_dir/config.yml"
+            die "Hiányos Wings konfiguráció: hiányzik a(z) $required mező."
+        }
+    done
     chmod 600 "$candidate"
     mv "$candidate" "$wings_config_dir/config.yml"
+    rm -f "${previous_config:-}"
     touch "$INSTALL_DIR/deploy/state/local-wings-owned"
     if [[ $mode == docker ]]; then
         touch "$INSTALL_DIR/deploy/state/wings.enabled"
