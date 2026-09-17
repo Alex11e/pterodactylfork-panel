@@ -112,11 +112,24 @@ echo 'PASS: staged downloads, missing branch recovery, source refresh and local-
 INSTALL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/alex-existing-install.XXXXXX")
 mkdir -p "$INSTALL_DIR/deploy"
 printf 'APP_KEY=preserve-me\n' > "$INSTALL_DIR/deploy/.env"
-repair_marker="$INSTALL_DIR/repair-called"
+repair_marker="$(dirname "$INSTALL_DIR")/repair-called-$RANDOM"
 confirm() { return 0; }
-refresh_source() { touch "$repair_marker"; }
-initialize_panel() { [[ ${1:-} == repair ]] || die 'Existing install did not use repair mode'; }
+remove_existing_install() { touch "$repair_marker"; rm -rf -- "$INSTALL_DIR"; }
+install_dependencies() { :; }
+fetch_source() { mkdir -p "$INSTALL_DIR"; }
+initialize_panel() { :; }
 INSTALL_COMPONENTS=panel
 new_install false
-[[ -f $repair_marker ]] || die 'Existing install did not route to repair mode'
-echo 'PASS: existing installation is repaired from the new-install menu without overwrite'
+[[ -f $repair_marker && -f $INSTALL_DIR/deploy/.env ]] || die 'Existing install was not replaced cleanly'
+echo 'PASS: existing installation is removed and recreated from the new-install menu'
+
+# An explicit clean install removes only the validated installation directory.
+INSTALL_DIR=$(mktemp -d "${TMPDIR:-/tmp}/alex-delete-install.XXXXXX")
+mkdir -p "$INSTALL_DIR/deploy/state"
+printf 'docker\n' > "$INSTALL_DIR/deploy/state/backend"
+printf 'APP_KEY=delete-me\n' > "$INSTALL_DIR/deploy/.env"
+confirm() { return 0; }
+compose() { return 0; }
+remove_existing_install
+[[ ! -e $INSTALL_DIR ]] || die 'Clean install did not remove the requested directory'
+echo 'PASS: clean install removes the existing installation after confirmation'

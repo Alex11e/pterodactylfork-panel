@@ -138,6 +138,35 @@ fetch_source() {
     mv -T "$staging" "$INSTALL_DIR"
 }
 
+remove_existing_install() {
+    local mode=docker
+    [[ -f $INSTALL_DIR/deploy/state/backend ]] && mode=$(cat "$INSTALL_DIR/deploy/state/backend")
+    case $mode in docker|native) ;; *) die 'Érvénytelen meglévő futtatási mód; a könyvtárat nem töröltem.' ;; esac
+    printf '\nFIGYELEM: a teljes meglévő telepítés törlődik: %s\n' "$INSTALL_DIR"
+    printf 'A művelet a panel adatbázisát, Docker-köteteit és a helyi Wings-beállítást is törölheti.\n'
+    confirm 'Töröljem a meglévő telepítést és kezdjek tiszta telepítést?' || return 1
+    if [[ $mode == docker ]]; then
+        if command -v docker >/dev/null 2>&1 && [[ -f $INSTALL_DIR/deploy/.env ]]; then
+            compose down --volumes --remove-orphans || true
+        fi
+    else
+        for service in alex-wings alex-panel-queue alex-panel-scheduler alex-panel-gateway.timer; do
+            systemctl disable --now "$service" >/dev/null 2>&1 || true
+        done
+        rm -f /etc/systemd/system/alex-wings.service /etc/systemd/system/alex-panel-queue.service \
+            /etc/systemd/system/alex-panel-scheduler.service /etc/systemd/system/alex-panel-gateway.service \
+            /etc/systemd/system/alex-panel-gateway.timer /usr/local/bin/alex-wings /usr/local/sbin/alex-panel-gateway
+        rm -f /etc/nginx/sites-enabled/alex-panel.conf /etc/nginx/sites-available/alex-panel.conf
+        if command -v mariadb >/dev/null 2>&1; then
+            mariadb -e "DROP DATABASE IF EXISTS alex_panel; DROP USER IF EXISTS 'alex_panel'@'localhost';" || true
+        fi
+        systemctl daemon-reload >/dev/null 2>&1 || true
+        nginx -t >/dev/null 2>&1 && systemctl reload nginx >/dev/null 2>&1 || true
+    fi
+    [[ $INSTALL_DIR == /* && $INSTALL_DIR != / && $INSTALL_DIR != /etc && $INSTALL_DIR != /usr && $INSTALL_DIR != /var ]] || die 'A törlendő könyvtár nem biztonságos.'
+    rm -rf -- "$INSTALL_DIR"
+}
+
 refresh_source() {
     existing
     validate_repository
@@ -161,13 +190,12 @@ repair_install() {
 new_install() {
     local tls=$1 domain='' email='' app_url bind_ip=127.0.0.1
     if [[ -f $INSTALL_DIR/deploy/.env ]]; then
-        printf '\nMeglévő Alex Panel telepítést találtam: %s\n' "$INSTALL_DIR"
-        printf 'A mentett futtatási mód (%s), kulcsok, adatbázis és kötetek megmaradnak. A forrást frissítem és javítási telepítést futtatok.\n' "$(backend)"
-        confirm 'Folytassam a meglévő telepítés javítását?' || return 0
-        refresh_source
-        initialize_panel repair
-        if [[ $INSTALL_COMPONENTS == all ]]; then install_local_wings; fi
-        return
+        remove_existing_install || return 0
+    elif [[ -e $INSTALL_DIR ]]; then
+        printf '\nFélbemaradt vagy ismeretlen könyvtár található: %s\n' "$INSTALL_DIR"
+        confirm 'Töröljem ezt a könyvtárat és kezdjek tiszta telepítést?' || return 0
+        [[ $INSTALL_DIR == /* && $INSTALL_DIR != / && $INSTALL_DIR != /etc && $INSTALL_DIR != /usr && $INSTALL_DIR != /var ]] || die 'A törlendő könyvtár nem biztonságos.'
+        rm -rf -- "$INSTALL_DIR"
     fi
     if [[ $tls == true ]]; then
         read -r -p 'Panel domain (pl. panel.pelda.hu): ' domain
