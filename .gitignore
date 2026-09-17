@@ -37,3 +37,4 @@ result
 
 /deploy/backups/
 /deploy/state/
+/deploy/cache/

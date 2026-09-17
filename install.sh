@@ -5,6 +5,8 @@ umask 077
 INSTALL_DIR=${INSTALL_DIR:-/opt/alex-panel}
 PANEL_REPOSITORY=${PANEL_REPOSITORY:-https://github.com/Alex11e/pterodactylfork-panel.git}
 PANEL_REF=${PANEL_REF:-1.0-develop}
+INSTALL_BACKEND=docker
+INSTALL_COMPONENTS=panel
 
 die() { printf '\nHIBA: %s\n' "$*" >&2; exit 1; }
 need_root() { [[ $EUID -eq 0 ]] || die 'Root jogosultság kell. Előbb: sudo -i'; }
@@ -27,6 +29,53 @@ compose() {
     docker compose "${args[@]}" "$@"
 }
 existing() { [[ -f $INSTALL_DIR/deploy/.env ]] || die "Nincs telepítés itt: $INSTALL_DIR"; }
+backend() { if [[ -f $INSTALL_DIR/deploy/state/backend ]]; then cat "$INSTALL_DIR/deploy/state/backend"; else printf docker; fi; }
+load_native() { source "$INSTALL_DIR/deploy/install/native.sh"; }
+panel_artisan() {
+    if [[ $(backend) == native ]]; then load_native; native_artisan "$@";
+    else compose exec -T --workdir /app panel php /app/artisan "$@"; fi
+}
+
+install_wizard() {
+    local tls=$1 choice
+    printf '\nPanel futtatása:\n1) Docker Compose (ajánlott)\n2) Natív Nginx + PHP-FPM (Ubuntu 24.04 / Debian 12–13)\n'
+    read -r -p 'Futtatási mód [1]: ' choice
+    case ${choice:-1} in 1) INSTALL_BACKEND=docker ;; 2) INSTALL_BACKEND=native ;; *) die 'Érvénytelen futtatási mód.' ;; esac
+    printf '\nÖsszetevők:\n1) Csak panel\n2) Panel + Wings egyben ezen a gépen\n'
+    read -r -p 'Összetevők [1]: ' choice
+    case ${choice:-1} in 1) INSTALL_COMPONENTS=panel ;; 2) INSTALL_COMPONENTS=all ;; *) die 'Érvénytelen összetevő.' ;; esac
+    printf 'A Wings által indított játékok mindkét módban Docker-konténerekben futnak.\n'
+    new_install "$tls"
+}
+
+install_local_wings() {
+    existing
+    [[ -f $INSTALL_DIR/deploy/install/all-in-one.sh ]] || die 'A Wings-varázslóhoz előbb frissíts a 8-as menüvel.'
+    source "$INSTALL_DIR/deploy/install/all-in-one.sh"
+    all_in_one_wings
+}
+
+show_status() {
+    existing
+    if [[ $(backend) == native ]]; then
+        systemctl --no-pager status nginx mariadb redis-server alex-panel-queue alex-panel-scheduler || true
+        journalctl --no-pager -n 30 -u alex-panel-queue -u alex-panel-scheduler
+    else compose ps; compose logs --tail=40 panel; fi
+}
+
+restart_services() {
+    existing
+    if [[ $(backend) == native ]]; then
+        systemctl restart "php$(php -r 'echo PHP_MAJOR_VERSION,".",PHP_MINOR_VERSION;')-fpm" alex-panel-queue alex-panel-scheduler
+        nginx -t && systemctl reload nginx
+    else compose restart; fi
+}
+
+make_admin() {
+    existing
+    if [[ $(backend) == native ]]; then load_native; native_artisan p:user:make --admin=1;
+    else compose exec --workdir /app panel php /app/artisan p:user:make --admin=1; fi
+}
 
 validate_source() {
     local root=$1 file
@@ -110,11 +159,19 @@ new_install() {
         app_url=http://localhost:8080
         printf 'HTTP tesztmód: csak localhost:8080, távoli eléréshez SSH-tunnel kell. Éles használathoz a HTTPS-módot válaszd.\n'
     fi
-    printf '\nCél: %s\nForrás: %s (%s)\nPanel: %s\n' "$INSTALL_DIR" "$PANEL_REPOSITORY" "$PANEL_REF" "$app_url"
-    confirm 'Telepítsem a Docker-alapú panelt és a szükséges csomagokat?' || return 0
-    install_dependencies
+    printf '\nCél: %s\nForrás: %s (%s)\nPanel: %s\nMód: %s / %s\n' "$INSTALL_DIR" "$PANEL_REPOSITORY" "$PANEL_REF" "$app_url" "$INSTALL_BACKEND" "$INSTALL_COMPONENTS"
+    confirm 'Telepítsem a panelt és a kiválasztott összetevőket?' || return 0
+    if [[ $INSTALL_BACKEND == docker ]]; then install_dependencies;
+    else
+        . /etc/os-release
+        case "$ID:$VERSION_ID" in ubuntu:24.04|debian:12|debian:13) ;; *) die 'Nem támogatott natív rendszer. Használd a Docker módot.' ;; esac
+        apt-get update
+        apt-get install -y ca-certificates curl git openssl
+    fi
     fetch_source
     mkdir -p "$INSTALL_DIR/deploy/state"
+    printf '%s\n' "$INSTALL_BACKEND" > "$INSTALL_DIR/deploy/state/backend"
+    printf '%s\n' "$INSTALL_COMPONENTS" > "$INSTALL_DIR/deploy/state/components"
     [[ ! -e $INSTALL_DIR/deploy/.env ]] || die 'A deploy/.env már létezik; a kulcsokat nem módosítom.'
     {
         printf 'APP_URL=%s\nAPP_KEY=base64:%s\nHASHIDS_SALT=%s\n' "$app_url" "$(openssl rand -base64 32)" "$(openssl rand -hex 24)"
@@ -124,11 +181,13 @@ new_install() {
     } > "$INSTALL_DIR/deploy/.env"
     chmod 0600 "$INSTALL_DIR/deploy/.env"
     initialize_panel
+    if [[ $INSTALL_COMPONENTS == all ]]; then install_local_wings; fi
     printf '\nA panel elindult: %s\nA kulcsokat őrizd meg: %s/deploy/.env\nSMTP még nincs beállítva; a log mailer nem küld levelet.\n' "$app_url" "$INSTALL_DIR"
 }
 
 initialize_panel() {
     existing
+    if [[ $(backend) == native ]]; then load_native; native_initialize; return; fi
     validate_source "$INSTALL_DIR"
     local was_installed=false
     [[ ! -f $INSTALL_DIR/deploy/state/installed ]] || was_installed=true
@@ -155,6 +214,7 @@ initialize_panel() {
 
 setup_wings() {
     existing
+    if [[ $(backend) == native ]]; then install_local_wings; return; fi
     [[ -f /etc/pterodactyl/config.yml ]] || die 'Előbb készíts node-ot a panel adminfelületén, majd mentsd a node konfigurációját az /etc/pterodactyl/config.yml fájlba. Részletek: DOCKER-HU.md.'
     printf 'A Wings a host Docker socketjét és azonos host-adatútvonalakat kapja. A panel belső node-címe: host.docker.internal:8081 (HTTP).\n'
     printf 'A config api.port legyen 8081; az api.host a Docker bridge belső címe, ne 127.0.0.1.\n'
@@ -169,6 +229,7 @@ setup_wings() {
 
 backup_panel() {
     existing
+    if [[ $(backend) == native ]]; then load_native; native_backup; return; fi
     local target="$INSTALL_DIR/deploy/backups/$(date -u +%Y%m%dT%H%M%SZ)"
     mkdir -p "$target"
     cp "$INSTALL_DIR/deploy/.env" "$target/deploy.env"
@@ -191,13 +252,13 @@ main() {
     local choice
     read -r -p 'Választás: ' choice
     case $choice in
-        1) new_install true ;;
-        2) new_install false ;;
-        3) setup_wings ;;
+        1) install_wizard true ;;
+        2) install_wizard false ;;
+        3) install_local_wings ;;
         4) backup_panel ;;
-        5) existing; compose ps; compose logs --tail=40 panel ;;
-        6) existing; compose exec --workdir /app panel php /app/artisan p:user:make --admin=1 ;;
-        7) existing; compose restart ;;
+        5) show_status ;;
+        6) make_admin ;;
+        7) restart_services ;;
         8) repair_install ;;
         0) return ;;
         *) die 'Érvénytelen menüpont.' ;;

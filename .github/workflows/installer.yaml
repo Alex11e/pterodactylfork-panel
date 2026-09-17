@@ -2,7 +2,7 @@ name: Installer Docker smoke test
 on:
   push:
     branches: [1.0-develop]
-    paths: ['install.sh', 'deploy/**', 'compose*.yaml', 'tests/*install*', '.github/workflows/installer.yaml', 'composer.*', '.dockerignore', '.gitattributes']
+    paths: ['install.sh', 'deploy/**', 'compose*.yaml', 'tests/*install*', 'app/Console/Commands/Node/InstallerNodeCommand.php', '.github/workflows/installer.yaml', 'composer.*', '.dockerignore', '.gitattributes']
   workflow_dispatch:
 permissions:
   contents: read
@@ -23,4 +23,22 @@ jobs:
           docker compose --env-file deploy/.env -f compose.yaml logs --tail=100 || true
       - name: Remove test containers
         if: always()
-        run: docker compose --env-file deploy/.env -f compose.yaml down --volumes || true
+        run: docker compose --env-file deploy/.env -f compose.yaml -f compose.wings.yaml down --volumes || true
+  native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare disposable runner for MariaDB
+        run: |
+          sudo systemctl stop mysql || true
+          mapfile -t packages < <(dpkg-query -W -f='${binary:Package} ${db:Status-Status}\n' 'mysql-*' 2>/dev/null | awk '$2 == "installed" {print $1}')
+          if ((${#packages[@]})); then sudo apt-get remove --purge -y "${packages[@]}"; fi
+          if [ -d /var/lib/mysql ]; then sudo mv /var/lib/mysql /var/lib/mysql-runner-original; fi
+      - name: Native panel and Wings installation
+        run: sudo --preserve-env=GITHUB_ACTIONS,RUNNER_ENVIRONMENT bash tests/native-install.sh
+      - name: Diagnostics
+        if: failure()
+        run: |
+          sudo journalctl --no-pager -n 100 -u nginx -u mariadb -u alex-panel-queue -u alex-panel-scheduler -u alex-wings
+          sudo tail -n 80 /opt/alex-panel/storage/logs/laravel-*.log || true

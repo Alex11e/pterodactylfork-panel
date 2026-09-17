@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+[[ ${GITHUB_ACTIONS:-} == true && ${RUNNER_ENVIRONMENT:-} == github-hosted ]] || { echo 'Run only on a disposable GitHub-hosted runner.' >&2; exit 1; }
+[[ $EUID == 0 ]] || { echo 'Root required on disposable runner.' >&2; exit 1; }
+cd "$(dirname "$0")/.."
+INSTALL_DIR=/opt/alex-panel
+[[ ! -e $INSTALL_DIR ]] || exit 1
+umask 077
+git clone --no-hardlinks "$PWD" "$INSTALL_DIR"
+cd "$INSTALL_DIR"
+source ./install.sh
+source deploy/install/native.sh
+mkdir -p deploy/state
+printf 'native\n' > deploy/state/backend
+{
+    printf 'APP_URL=http://localhost:8080\nAPP_KEY=base64:%s\n' "$(openssl rand -base64 32)"
+    printf 'HASHIDS_SALT=%s\nDB_PASSWORD=%s\n' "$(openssl rand -hex 24)" "$(openssl rand -hex 32)"
+    printf 'TLS_ENABLED=false\nAPP_TIMEZONE=Europe/Budapest\nMAIL_MAILER=log\n'
+} > deploy/.env
+native_artisan() {
+    if [[ $1 == p:user:make ]]; then return 0; fi
+    (cd "$INSTALL_DIR" && runuser -u www-data -- php "$INSTALL_DIR/artisan" "$@")
+}
+native_initialize
+runuser -u www-data -- php "$INSTALL_DIR/artisan" --version
+curl -fsS http://127.0.0.1:8080/auth/login -o /tmp/alex-native-login.html
+grep -q '<html' /tmp/alex-native-login.html
+before=$(sha256sum deploy/.env)
+native_initialize
+[[ $(sha256sum deploy/.env) == "$before" ]]
+echo 'PASS: native Nginx/PHP-FPM/MariaDB/Redis install, HTTP login and preserved credentials on repeat.'
+source deploy/install/all-in-one.sh
+install_dependencies() { docker info >/dev/null; }
+all_in_one_wings <<'INPUT'
+127.0.0.1
+25565
+2048
+10240
+i
+INPUT
+panel_artisan p:installer:node --check
+echo 'PASS: native Wings systemd service and authenticated panel connection.'

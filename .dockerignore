@@ -10,5 +10,6 @@ bootstrap/cache/*.php
 deploy/.env
 deploy/backups
 deploy/state
+deploy/cache
 *.zip
 *.log

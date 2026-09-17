@@ -18,6 +18,8 @@ COPY --from=frontend /app/public/assets ./public/assets
 RUN test -s /app/artisan && test -s /app/public/assets/manifest.json \
     && composer install --working-dir=/app --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-scripts \
     && composer check-platform-reqs --no-dev \
+    && find /app -type d -exec chmod 755 {} + \
+    && find /app -type f -exec chmod 644 {} + \
     && mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache /etc/nginx/gateway /run/nginx \
     && chown -R www-data:www-data storage bootstrap/cache \
     && chmod +x deploy/docker/*.sh \

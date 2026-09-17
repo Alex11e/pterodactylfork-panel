@@ -1,5 +1,7 @@
 # Docker telepítés – Alex Panel
 
+A Docker/natív mód és az egyben telepítés kiválasztásához lásd `TELEPITES-HU.md`.
+
 ## Gyors telepítő
 
 Csak ellenőrzött, saját kiadású URL-ről futtasd a telepítőt. Az aktuális repóban
@@ -32,11 +34,11 @@ használható. A régi, félbemaradt könyvtárat őrizd meg más néven, majd v
 1-es vagy 2-es módot. Az új telepítő már külön ideiglenes könyvtárba tölt le,
 és csak ellenőrzött, teljes forrás esetén hozza létre a végleges célkönyvtárat.
 
-Az 1-es mód HTTPS-es panelt telepít Caddyvel. A DNS-rekordnak a gépre kell
+Az 1-es mód HTTPS-es varázsló; Docker választásakor Caddy adja a HTTPS-t. A DNS-rekordnak a gépre kell
 mutatnia, a 80/443 portnak elérhetőnek kell lennie, és valódi e-mail-címet kell
 megadni a tanúsítványhoz. A 2-es mód csak helyi HTTP teszt, éles internetes
-használatra nem való. A 3-as mód opcionálisan felépíti a megadott Alex11e/wings
-commitből a Wings konténert. A 4-es mód a panel-adatbázist és panel storage-t
+használatra nem való. A 3-as mód automatikus helyi node- és Wings-beállítás.
+A 4-es mód a panel-adatbázist és panel storage-t
 menti; a játékszerverek fájljai külön volume-ok.
 
 Az első telepítés után a panel `.env`-je a `deploy/.env` fájlban marad. Mentsd el
@@ -70,8 +72,8 @@ esetén visszaáll korábbi, érvényes fájlra, ha az új konfiguráció hibás
 
 ## Wings Dockerben
 
-A 3-as menüpontot csak akkor használd, ha a node által generált konfigurációt már
-elmentetted a host `/etc/pterodactyl/config.yml` fájljába. A Wings konténer host
+A 3-as menüpont maga készíti el a helyi node konfigurációját. A már meglévő,
+más módon létrehozott konfigurációt nem írja felül. A Wings konténer host
 network módban fut, megkapja a Docker socketet és a `/var/lib/pterodactyl`,
 `/var/log/pterodactyl`, `/tmp/pterodactyl` könyvtárakat. Ez erős jogosultság: a
 socket birtokosa lényegében host-szintű Docker-hozzáférést kap, ezért csak
