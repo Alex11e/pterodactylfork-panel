@@ -122,7 +122,9 @@ fetch_source() {
 }
 initialize_panel() { :; }
 INSTALL_COMPONENTS=panel
-new_install false
+new_install false <<'INPUT'
+1
+INPUT
 [[ -f $repair_marker && -f $INSTALL_DIR/deploy/.env ]] || die 'Existing install was not replaced cleanly'
 echo 'PASS: existing installation is removed and recreated from the new-install menu'
 

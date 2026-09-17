@@ -20,6 +20,12 @@ valid_domain() {
     done
 }
 valid_email() { [[ $1 =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; }
+valid_ipv4() {
+    local part
+    [[ $1 =~ ^[0-9]+(\.[0-9]+){3}$ ]] || return 1
+    IFS=. read -r -a parts <<< "$1"
+    for part in "${parts[@]}"; do [[ $part -le 255 ]] || return 1; done
+}
 valid_directory() { [[ $1 == /* && $1 != / && $1 != /etc && $1 != /usr && $1 != /var && $1 != *..* && $1 != *$'\n'* ]]; }
 confirm() { local answer; read -r -p "$1 [i/N]: " answer; [[ $answer == i || $answer == I || $answer == y || $answer == Y ]]; }
 compose() {
@@ -315,7 +321,7 @@ restore_panel_backup() {
 }
 
 new_install() {
-    local tls=$1 domain='' email='' app_url bind_ip=127.0.0.1
+    local tls=$1 domain='' email='' app_url bind_ip=127.0.0.1 choice lan_address
     if [[ -f $INSTALL_DIR/deploy/.env ]]; then
         remove_existing_install || return 0
     elif [[ -e $INSTALL_DIR ]]; then
@@ -332,8 +338,22 @@ new_install() {
         app_url="https://$domain"
         printf 'A domain DNS-e erre a gépre mutasson; a 80/443 port legyen szabad és elérhető.\n'
     else
-        app_url=http://localhost:8080
-        printf 'HTTP tesztmód: csak localhost:8080, távoli eléréshez SSH-tunnel kell. Éles használathoz a HTTPS-módot válaszd.\n'
+        printf '\nHelyi elérés:\n1) Csak ezen a gépen (localhost)\n2) Helyi hálózaton is elérhető\n'
+        read -r -p 'Elérés [1]: ' choice
+        case ${choice:-1} in
+            1)
+                app_url=http://localhost:8080
+                printf 'HTTP mód: csak localhost:8080.\n'
+                ;;
+            2)
+                read -r -p 'A gép LAN IPv4-címe (például 192.168.1.20): ' lan_address
+                valid_ipv4 "$lan_address" || die 'Érvénytelen LAN IPv4-cím.'
+                bind_ip=0.0.0.0
+                app_url="http://$lan_address:8080"
+                printf 'HTTP mód: a helyi hálózaton elérhető lesz a %s címen. Internet felől ne engedd át a 8080-as portot.\n' "$app_url"
+                ;;
+            *) die 'Érvénytelen helyi elérési mód.' ;;
+        esac
     fi
     printf '\nCél: %s\nForrás: %s (%s)\nPanel: %s\nMód: %s / %s\n' "$INSTALL_DIR" "$PANEL_REPOSITORY" "$PANEL_REF" "$app_url" "$INSTALL_BACKEND" "$INSTALL_COMPONENTS"
     confirm 'Telepítsem a panelt és a kiválasztott összetevőket?' || return 0

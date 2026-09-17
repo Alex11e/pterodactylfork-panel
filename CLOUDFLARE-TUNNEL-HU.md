@@ -6,6 +6,15 @@ A telepítő alapértelmezett HTTP módja csak a gép helyi címére figyel:
 - bind cím: `127.0.0.1`
 - kívülről elérhető 80/443 port: nincs
 
+## Helyi telepítés
+
+Indítsd az installert rootként, majd válaszd a `2) Új panel helyi HTTP teszthez` menüpontot. Ezután:
+
+- `1) Csak ezen a gépen`: csak `http://localhost:8080` működik.
+- `2) Helyi hálózaton is elérhető`: add meg a gép LAN-címét, például `192.168.1.20`; a panel `http://192.168.1.20:8080` címen lesz elérhető.
+
+LAN módnál a telepítő `0.0.0.0` bind címet használ, ezért a gép tűzfalán a 8080-as TCP portot csak a helyi hálózatból engedélyezd. Routeren ne továbbítsd ezt a portot az internet felé.
+
 ## Tunnel beállítása
 
 1. Telepítsd a `cloudflared` klienst azon a gépen, ahol a panel fut.

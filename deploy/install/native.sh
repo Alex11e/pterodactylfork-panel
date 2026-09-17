@@ -73,7 +73,8 @@ native_nginx_config() {
     domain=$(native_env PANEL_DOMAIN)
     tls=$(native_env TLS_ENABLED)
     socket="/run/php/php$(php -r 'echo PHP_MAJOR_VERSION,".",PHP_MINOR_VERSION;')-fpm.sock"
-    listen='127.0.0.1:8080'
+    listen="$(native_env PANEL_BIND_IP):8080"
+    [[ $listen == ':8080' ]] && listen='127.0.0.1:8080'
     if [[ $tls == true ]]; then
         valid_domain "$domain" || die 'Érvénytelen panel domain a mentett konfigurációban.'
         listen=80
