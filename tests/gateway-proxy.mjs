@@ -102,7 +102,7 @@ try {
     const port = portReservation.address().port; await new Promise(r => portReservation.close(r));
     const rendered = spawnSync(php, [join(here, 'render-gateway-fixture.php'), String(wings1.address().port), String(wings2.address().port)], { encoding: 'utf8', windowsHide: true });
     assert.equal(rendered.status, 0, rendered.error?.message || rendered.stderr);
-    writeFileSync(join(scratch, 'nginx.conf'), `daemon off;\nworker_processes 1;\nerror_log logs/error.log;\npid logs/nginx.pid;\nevents { worker_connections 128; }\nhttp { client_body_temp_path temp/body; proxy_temp_path temp/proxy; fastcgi_temp_path temp/fastcgi; uwsgi_temp_path temp/uwsgi; scgi_temp_path temp/scgi; server { listen 127.0.0.1:${port};\n${rendered.stdout}\nlocation / { return 404; } } }`);
+    writeFileSync(join(scratch, 'nginx.conf'), `daemon off;\nworker_processes 1;\nerror_log logs/error.log;\npid logs/nginx.pid;\nevents { worker_connections 128; }\nhttp { access_log off; client_body_temp_path temp/body; proxy_temp_path temp/proxy; fastcgi_temp_path temp/fastcgi; uwsgi_temp_path temp/uwsgi; scgi_temp_path temp/scgi; server { listen 127.0.0.1:${port};\n${rendered.stdout}\nlocation / { return 404; } } }`);
     const prefix = scratch.replaceAll('\\', '/') + '/';
     const args = ['-p', prefix, '-c', 'nginx.conf'];
     const syntax = spawnSync(nginx, [...args, '-t'], { cwd: scratch, encoding: 'utf8', windowsHide: true });

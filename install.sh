@@ -71,8 +71,8 @@ fetch_source() {
     staging=$(mktemp -d "${INSTALL_DIR}.download.XXXXXX")
     git -C "$staging" init --quiet
     git -C "$staging" remote add origin "$PANEL_REPOSITORY"
-    git -C "$staging" fetch --depth 1 origin "$PANEL_REF"
-    git -C "$staging" checkout --detach FETCH_HEAD
+    git -C "$staging" fetch --depth 1 origin "$PANEL_REF" || die "Nem tölthető le a Git-ref: $PANEL_REF. Ellenőrizd a branch nevét és a hálózatot. Ideiglenes forrás: $staging"
+    git -C "$staging" checkout --detach FETCH_HEAD || die 'A letöltött forrás nem állítható össze.'
     validate_source "$staging"
     mv -T "$staging" "$INSTALL_DIR"
 }
@@ -85,8 +85,8 @@ refresh_source() {
     git -C "$INSTALL_DIR" diff --quiet || die 'Helyileg módosított forrásfájlok vannak. Mentsd/commitold őket a frissítés előtt.'
     git -C "$INSTALL_DIR" diff --cached --quiet || die 'Commitra váró módosítások vannak.'
     # Credentials, application key and named volumes stay in place.
-    git -C "$INSTALL_DIR" fetch --depth 1 origin "$PANEL_REF"
-    git -C "$INSTALL_DIR" checkout --detach FETCH_HEAD
+    git -C "$INSTALL_DIR" fetch --depth 1 origin "$PANEL_REF" || die "Nem tölthető le a Git-ref: $PANEL_REF. A meglévő forrás megmaradt."
+    git -C "$INSTALL_DIR" checkout --detach FETCH_HEAD || die 'A helyi fájlok miatt a frissítés nem alkalmazható. A meglévő adatokat megtartottam.'
     validate_source "$INSTALL_DIR"
 }
 

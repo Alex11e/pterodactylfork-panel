@@ -70,3 +70,39 @@ docker() {
 if (initialize_panel repair) 2>/dev/null; then die 'Incomplete image was accepted'; fi
 if grep -q 'migrate --force' "$capture"; then die 'Migrated with incomplete image'; fi
 printf 'PASS: source/image guards, first installation, repair ordering and credential preservation\n'
+
+# Real Git fixture: download and refresh without depending on a public GitHub branch.
+fixture=$(mktemp -d "${TMPDIR:-/tmp}/alex-git-fixture.XXXXXX")
+command git -C "$fixture" init --quiet -b 1.0-develop
+for file in artisan composer.json composer.lock bootstrap/app.php compose.yaml deploy/docker/Dockerfile deploy/docker/entrypoint.sh; do
+    mkdir -p "$fixture/$(dirname "$file")"
+    printf 'fixture\n' > "$fixture/$file"
+done
+command git -C "$fixture" add .
+command git -C "$fixture" -c user.name=InstallerTest -c user.email=test@example.invalid commit -qm fixture
+git() {
+    if [[ ${3:-} == fetch ]]; then
+        command git -c core.autocrlf=false -C "$2" fetch --depth 1 "$fixture" "${@: -1}"
+    else
+        command git -c core.autocrlf=false "$@"
+    fi
+}
+INSTALL_DIR="$(dirname "$fixture")/alex-download-$RANDOM-$RANDOM"
+PANEL_REF=missing-branch
+if (fetch_source) >/dev/null 2>&1; then die 'Missing branch was accepted'; fi
+[[ ! -e $INSTALL_DIR ]] || die 'Failed fetch polluted final installation directory'
+PANEL_REF=1.0-develop
+fetch_source
+validate_source "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR/deploy"
+printf 'APP_KEY=keep-this-test-key\n' > "$INSTALL_DIR/deploy/.env"
+printf 'updated\n' > "$fixture/artisan"
+command git -C "$fixture" add artisan
+command git -C "$fixture" -c user.name=InstallerTest -c user.email=test@example.invalid commit -qm update
+refresh_source
+grep -qx updated "$INSTALL_DIR/artisan"
+grep -qx APP_KEY=keep-this-test-key "$INSTALL_DIR/deploy/.env"
+printf 'local edit\n' > "$INSTALL_DIR/artisan"
+if (refresh_source) >/dev/null 2>&1; then die 'Local changes were overwritten'; fi
+grep -qx 'local edit' "$INSTALL_DIR/artisan"
+echo 'PASS: staged downloads, missing branch recovery, source refresh and local-edit protection'
