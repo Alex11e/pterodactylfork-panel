@@ -2,7 +2,7 @@ name: Installer Docker smoke test
 on:
   push:
     branches: [1.0-develop]
-    paths: ['install.sh', 'deploy/**', 'compose*.yaml', 'tests/*install*', 'app/Console/Commands/Node/InstallerNodeCommand.php', '.github/workflows/installer.yaml', 'composer.*', '.dockerignore', '.gitattributes']
+    paths: ['install.sh', 'deploy/**', 'compose*.yaml', 'tests/*install*', 'app/Console/Commands/Node/InstallerNodeCommand.php', 'resources/scripts/**', '.github/workflows/installer.yaml', 'composer.*', '.dockerignore', '.gitattributes']
   workflow_dispatch:
 permissions:
   contents: read

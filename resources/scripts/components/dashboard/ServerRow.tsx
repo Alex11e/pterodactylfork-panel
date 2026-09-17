@@ -1,6 +1,6 @@
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEthernet, faHdd, faMemory, faMicrochip, faServer } from '@fortawesome/free-solid-svg-icons';
+import { faEthernet, faHdd, faMemory, faMicrochip, faServer, faStar as faStarSolid } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
 import { Server } from '@/api/server/getServer';
 import getServerResourceUsage, { ServerPowerState, ServerStats } from '@/api/server/getServerResourceUsage';
@@ -49,7 +49,17 @@ const StatusIndicatorBox = styled(GreyRowBox)<{ $status: ServerPowerState | unde
 
 type Timer = ReturnType<typeof setInterval>;
 
-export default ({ server, className }: { server: Server; className?: string }) => {
+export default ({
+    server,
+    className,
+    isFavorite = false,
+    onToggleFavorite,
+}: {
+    server: Server;
+    className?: string;
+    isFavorite?: boolean;
+    onToggleFavorite?: () => void;
+}) => {
     const interval = useRef<Timer>(null) as React.MutableRefObject<Timer>;
     const [isSuspended, setIsSuspended] = useState(server.status === 'suspended');
     const [stats, setStats] = useState<ServerStats | null>(null);
@@ -90,6 +100,22 @@ export default ({ server, className }: { server: Server; className?: string }) =
 
     return (
         <StatusIndicatorBox as={Link} to={`/server/${server.id}`} className={className} $status={stats?.status}>
+            {onToggleFavorite && (
+                <button
+                    type={'button'}
+                    aria-label={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+                    onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        onToggleFavorite();
+                    }}
+                    css={tw`absolute top-3 right-5 z-30 text-yellow-400 hover:text-yellow-300 transition-colors`}
+                    style={{ opacity: isFavorite ? 1 : 0.35 }}
+                >
+                    <FontAwesomeIcon icon={faStarSolid} />
+                </button>
+            )}
             <div css={tw`flex items-center col-span-12 sm:col-span-5 lg:col-span-6`}>
                 <div className={'icon mr-4'}>
                     <FontAwesomeIcon icon={faServer} />
