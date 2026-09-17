@@ -62,6 +62,12 @@ játékszervert ezután a panel adminfelületén hozd létre.
 - **7:** panel háttérszolgáltatásainak újraindítása.
 - **8:** javított forrás letöltése, újraépítés és megszakadt telepítés folytatása.
 
+Ha az 1-es vagy 2-es új telepítési menüpontnál már létezik a célkönyvtár,
+a telepítő tiszta újratelepítést ajánl fel. Megerősítés után Docker módban a
+panel projekt konténerei és kötetei, natív módban a telepítő által létrehozott
+szolgáltatások, Wings és az `alex_panel` adatbázis is törlődik. A művelet után
+új kulcsokkal és üres adatbázissal indul a telepítés.
+
 A telepített mód a `deploy/state/backend` fájlban marad. A javítás ezt követi;
 Docker és natív mód között nem költöztet automatikusan adatbázist.
 Ha a Wings telepítése szakadt meg, a panel javítása után a 3-as menüt használd.

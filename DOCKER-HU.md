@@ -30,9 +30,9 @@ előtt készíts mentést. A helyileg módosított forrásfájlokat nem írja fe
 Ha az adminfiók létrehozásánál szakadt meg a folyamat, a **6-os menüpontot** használd.
 
 Ha a letöltés még a `deploy/.env` létrehozása előtt szakadt meg, a 8-as mód nem
-használható. A régi, félbemaradt könyvtárat őrizd meg más néven, majd válaszd az
-1-es vagy 2-es módot. Az új telepítő már külön ideiglenes könyvtárba tölt le,
-és csak ellenőrzött, teljes forrás esetén hozza létre a végleges célkönyvtárat.
+használható. Az 1-es vagy 2-es új telepítési mód ilyenkor külön megerősítéssel
+törli a félbemaradt célkönyvtárat, majd tiszta forrást tölt le. A telepítő előbb
+ellenőrzi a célt, és rendszerkönyvtárat nem enged törölni.
 
 Az 1-es mód HTTPS-es varázsló; Docker választásakor Caddy adja a HTTPS-t. A DNS-rekordnak a gépre kell
 mutatnia, a 80/443 portnak elérhetőnek kell lennie, és valódi e-mail-címet kell
